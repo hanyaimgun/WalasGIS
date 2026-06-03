@@ -32,8 +32,8 @@
             <div class="bg-blue-100 text-blue-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i class="fa-solid fa-map-location-dot text-4xl"></i>
             </div>
-            <h1 class="text-2xl font-bold mb-2">GIS Siswa TKJ</h1>
-            <p class="text-slate-500 mb-8 text-sm">Sistem Lapor Lokasi & Pendataan Domisili Siswa</p>
+            <h1 class="text-2xl font-bold mb-2">GIS Siswa Walas IG</h1>
+            <p class="text-slate-500 mb-8 text-sm">Sistem Pendataan Siswa dengan Walas IG</p>
             
             <button onclick="showPage('studentPage'); loadStudentList();" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl mb-4 transition duration-300 shadow-lg flex items-center justify-center gap-2">
                 <i class="fa-solid fa-user-graduate"></i> Saya Siswa (Lapor Lokasi)
@@ -50,7 +50,7 @@
             <button onclick="showPage('landingPage')" class="bg-white text-slate-600 p-2 rounded-lg shadow mr-3">
                 <i class="fa-solid fa-arrow-left"></i>
             </button>
-            <h2 class="text-lg font-bold">Formulir Lapor Lokasi</h2>
+            <h2 class="text-lg font-bold">Dashboard GIS Siswa Walas IG</h2>
         </div>
 
         <div class="w-full max-w-md bg-white p-5 rounded-2xl shadow-md mb-6">
@@ -62,7 +62,7 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="block text-sm font-semibold mb-1">NISN</label>
+                    <label class="block text-sm font-semibold mb-1">NIS</label>
                     <input type="number" id="nisn" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-500">
                 </div>
 
@@ -87,7 +87,7 @@
                         <input type="number" id="kontakSiswa" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none focus:border-blue-500 text-sm">
                     </div>
                     <div class="w-1/2">
-                        <label class="block text-xs font-semibold mb-1">No. WA Orang Tua</label>
+                        <label class="block text-xs font-semibold mb-1">No. HP/WA Orang Tua</label>
                         <input type="number" id="kontakOrtu" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none focus:border-blue-500 text-sm">
                     </div>
                 </div>
@@ -107,7 +107,7 @@
                 </div>
 
                 <button type="submit" id="btnSubmit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition duration-300 shadow-md">
-                    <span id="btnText"><i class="fa-solid fa-paper-plane mr-1"></i> Kirim Data Lokasi</span>
+                    <span id="btnText"><i class="fa-solid fa-paper-plane mr-1"></i> Kirim Data ke Walas</span>
                     <span id="btnLoading" class="hidden"><div class="spinner"></div> Mengirim...</span>
                 </button>
             </form>

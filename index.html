@@ -32,8 +32,8 @@
             <div class="bg-blue-100 text-blue-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <i class="fa-solid fa-map-location-dot text-4xl"></i>
             </div>
-            <h1 class="text-2xl font-bold mb-2">GIS Walas IG</h1>
-            <p class="text-slate-500 mb-8 text-sm">Sistem Pendataan Siswa Walas IG</p>
+            <h1 class="text-2xl font-bold mb-2">GIS Siswa TKJ</h1>
+            <p class="text-slate-500 mb-8 text-sm">Sistem Lapor Lokasi & Pendataan Domisili Siswa</p>
             
             <button onclick="showPage('studentPage'); loadStudentList();" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl mb-4 transition duration-300 shadow-lg flex items-center justify-center gap-2">
                 <i class="fa-solid fa-user-graduate"></i> Saya Siswa (Lapor Lokasi)
@@ -116,17 +116,11 @@
         <div class="w-full max-w-md bg-white p-5 rounded-2xl shadow-md mb-8">
             <h3 class="text-sm font-bold text-center mb-3 text-slate-600"><i class="fa-solid fa-list-check mr-1"></i> Status Pendaftaran Kelas</h3>
             <div id="loadingDaftar" class="text-center text-xs text-slate-400 py-4">Memuat data...</div>
-            <div id="gridSiswa" class="grid grid-cols-3 gap-2 hidden">
-            <div class="w-full max-w-md bg-white p-5 rounded-2xl shadow-md mb-8">
-            <h3 class="text-sm font-bold text-center mb-3 text-slate-600"><i class="fa-solid fa-list-check mr-1"></i> Status Pendaftaran Kelas</h3>
-            <div id="loadingDaftar" class="text-center text-xs text-slate-400 py-4">Memuat data...</div>
+            
             <div id="gridSiswa" class="grid grid-cols-3 gap-2 hidden">
                 </div>
-            
-            <div id="paginationControls" class="flex justify-center flex-wrap gap-1 mt-4"></div>
-            
-        </div>
-                </div>
+
+            <div id="paginationControls" class="flex justify-center flex-wrap gap-1 mt-4 hidden"></div>
         </div>
     </div>
 
@@ -146,313 +140,367 @@
     </div>
 
     <script>
-        // API URL Google Apps Script Anda yang Baru
-const API_URL = "https://script.google.com/macros/s/AKfycbzdn24y9qWXmcwvl5Jwh5JA3xmciDuvae_8VOiczM9uqunsRW8s4XsYpSKY4fGY3R3L/exec";
+        // API URL Google Apps Script Anda (TETAP SAMA)
+        const API_URL = "https://script.google.com/macros/s/AKfycbzdn24y9qWXmcwvl5Jwh5JA3xmciDuvae_8VOiczM9uqunsRW8s4XsYpSKY4fGY3R3L/exec";
+        
+        let globalMap = null;
+        let markersLayer = []; 
+        let dataSiswaList = []; 
 
-let globalMap = null;
-let markersLayer = []; 
-let dataSiswaList = []; 
+        // Variabel Pagination
+        let allValidStudents = [];
+        let currentPage = 1;
+        const itemsPerPage = 12; // Menampilkan 12 siswa per halaman
+        
+        // --- 1. FUNGSI NAVIGASI HALAMAN ---
+        function showPage(pageId) {
+            document.getElementById('landingPage').classList.add('hidden-page');
+            document.getElementById('studentPage').classList.add('hidden-page');
+            document.getElementById('teacherPage').classList.add('hidden-page');
+            document.getElementById(pageId).classList.remove('hidden-page');
+        }
 
-// --- 1. FUNGSI NAVIGASI HALAMAN ---
-function showPage(pageId) {
-    document.getElementById('landingPage').classList.add('hidden-page');
-    document.getElementById('studentPage').classList.add('hidden-page');
-    document.getElementById('teacherPage').classList.add('hidden-page');
-    document.getElementById(pageId).classList.remove('hidden-page');
-}
+        // --- 2. FUNGSI OTORISASI WALI KELAS ---
+        function loginTeacher() {
+            Swal.fire({
+                title: 'Akses Keamanan',
+                input: 'password',
+                inputLabel: 'Masukkan Password Wali Kelas',
+                inputPlaceholder: 'Password...',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Masuk'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (result.value === "Pekalongan123") {
+                        showPage('teacherPage');
+                        initMap(); 
+                    } else {
+                        Swal.fire('Akses Ditolak', 'Password yang Anda masukkan salah.', 'error');
+                    }
+                }
+            });
+        }
 
-// --- 2. FUNGSI OTORISASI WALI KELAS ---
-function loginTeacher() {
-    Swal.fire({
-        title: 'Akses Keamanan',
-        input: 'password',
-        inputLabel: 'Masukkan Password Wali Kelas',
-        inputPlaceholder: 'Password...',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Masuk'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            if (result.value === "Pekalongan123") {
-                showPage('teacherPage');
-                initMap(); 
+        // --- 3. FUNGSI GPS ---
+        function getLocation() {
+            if (navigator.geolocation) {
+                Swal.fire({ title: 'Mencari Lokasi...', text: 'Pastikan GPS HP Anda menyala.', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        document.getElementById('lat').value = position.coords.latitude;
+                        document.getElementById('lng').value = position.coords.longitude;
+                        Swal.fire('Berhasil!', 'Koordinat Anda telah dikunci.', 'success');
+                    },
+                    function(error) {
+                        Swal.fire('Gagal Akses GPS', 'Tolong izinkan akses lokasi (Location/GPS) di browser Anda.', 'error');
+                    },
+                    { enableHighAccuracy: true }
+                );
             } else {
-                Swal.fire('Akses Ditolak', 'Password yang Anda masukkan salah.', 'error');
+                Swal.fire('Error', 'Browser Anda tidak mendukung Geolocation.', 'error');
             }
         }
-    });
-}
 
-// --- 3. FUNGSI GPS ---
-function getLocation() {
-    if (navigator.geolocation) {
-        Swal.fire({ title: 'Mencari Lokasi...', text: 'Pastikan GPS HP Anda menyala.', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
-        navigator.geolocation.getCurrentPosition(
-            function(position) {
-                document.getElementById('lat').value = position.coords.latitude;
-                document.getElementById('lng').value = position.coords.longitude;
-                Swal.fire('Berhasil!', 'Koordinat Anda telah dikunci.', 'success');
-            },
-            function(error) {
-                Swal.fire('Gagal Akses GPS', 'Tolong izinkan akses lokasi (Location/GPS) di browser Anda.', 'error');
-            },
-            { enableHighAccuracy: true }
-        );
-    } else {
-        Swal.fire('Error', 'Browser Anda tidak mendukung Geolocation.', 'error');
-    }
-}
-
-// --- 4. FUNGSI KOMPRESI GAMBAR ---
-function compressAndEncodeImage(file, callback) {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = function(event) {
-        const img = new Image();
-        img.src = event.target.result;
-        img.onload = function() {
-            const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 800; 
-            let width = img.width;
-            let height = img.height;
-            
-            if (width > MAX_WIDTH) {
-                height *= MAX_WIDTH / width;
-                width = MAX_WIDTH;
+        // --- 4. FUNGSI KOMPRESI GAMBAR ---
+        function compressAndEncodeImage(file, callback) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function(event) {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800; 
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    callback(dataUrl);
+                }
             }
-            
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, width, height);
-            
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-            callback(dataUrl);
         }
-    }
-}
 
-// --- 5. FUNGSI SUBMIT FORM ---
-async function submitData(e) {
-    e.preventDefault();
-    
-    if(!document.getElementById('lat').value || !document.getElementById('lng').value){
-        Swal.fire('Peringatan', 'Mohon kunci koordinat lokasi Anda terlebih dahulu!', 'warning');
-        return;
-    }
+        // --- 5. FUNGSI SUBMIT FORM ---
+        async function submitData(e) {
+            e.preventDefault();
+            
+            if(!document.getElementById('lat').value || !document.getElementById('lng').value){
+                Swal.fire('Peringatan', 'Mohon kunci koordinat lokasi Anda terlebih dahulu dengan tombol biru!', 'warning');
+                return;
+            }
 
-    const nisnInput = document.getElementById('nisn').value;
-    const isExist = dataSiswaList.find(s => s.nisn == nisnInput);
-    if(isExist) {
-        Swal.fire('Ditolak', 'NISN Anda sudah terdaftar di sistem.', 'error');
-        return;
-    }
+            const nisnInput = document.getElementById('nisn').value;
+            const isExist = dataSiswaList.find(s => s.nisn == nisnInput);
+            if(isExist) {
+                Swal.fire('Ditolak', 'NISN Anda sudah terdaftar di sistem. Tidak perlu mengisi dua kali.', 'error');
+                return;
+            }
 
-    document.getElementById('btnText').classList.add('hidden');
-    document.getElementById('btnLoading').classList.remove('hidden');
-    document.getElementById('btnSubmit').disabled = true;
+            document.getElementById('btnText').classList.add('hidden');
+            document.getElementById('btnLoading').classList.remove('hidden');
+            document.getElementById('btnSubmit').disabled = true;
 
-    const fileSiswa = document.getElementById('fotoSiswa').files[0];
-    const fileRumah = document.getElementById('fotoRumah').files[0];
+            const fileSiswa = document.getElementById('fotoSiswa').files[0];
+            const fileRumah = document.getElementById('fotoRumah').files[0];
 
-    compressAndEncodeImage(fileSiswa, function(base64Siswa) {
-        compressAndEncodeImage(fileRumah, async function(base64Rumah) {
-            const payload = {
-                nama: document.getElementById('nama').value,
-                nisn: nisnInput,
-                latitude: document.getElementById('lat').value,
-                longitude: document.getElementById('lng').value,
-                alamat: document.getElementById('alamat').value,
-                kontakSiswa: document.getElementById('kontakSiswa').value,
-                namaOrtu: document.getElementById('namaOrtu').value,
-                kontakOrtu: document.getElementById('kontakOrtu').value,
-                fotoSiswa: base64Siswa,
-                fotoRumah: base64Rumah
-            };
+            compressAndEncodeImage(fileSiswa, function(base64Siswa) {
+                compressAndEncodeImage(fileRumah, async function(base64Rumah) {
+                    
+                    const payload = {
+                        nama: document.getElementById('nama').value,
+                        nisn: nisnInput,
+                        latitude: document.getElementById('lat').value,
+                        longitude: document.getElementById('lng').value,
+                        alamat: document.getElementById('alamat').value,
+                        kontakSiswa: document.getElementById('kontakSiswa').value,
+                        namaOrtu: document.getElementById('namaOrtu').value,
+                        kontakOrtu: document.getElementById('kontakOrtu').value,
+                        fotoSiswa: base64Siswa,
+                        fotoRumah: base64Rumah
+                    };
+
+                    try {
+                        const response = await fetch(API_URL, {
+                            method: "POST",
+                            body: JSON.stringify(payload),
+                            headers: { "Content-Type": "text/plain;charset=utf-8" } 
+                        });
+                        const result = await response.json();
+                        
+                        if(result.status === "success") {
+                            Swal.fire('Terkirim!', 'Data dan lokasi rumah Anda berhasil disimpan.', 'success').then(() => {
+                                document.getElementById('formSiswa').reset();
+                                loadStudentList(); // Refresh daftar otomatis
+                            });
+                        } else {
+                            Swal.fire('Gagal Menyimpan', result.message, 'error');
+                        }
+                    } catch (error) {
+                        Swal.fire('Error Koneksi', 'Gagal menghubungi server. Pastikan internet stabil.', 'error');
+                    } finally {
+                        document.getElementById('btnText').classList.remove('hidden');
+                        document.getElementById('btnLoading').classList.add('hidden');
+                        document.getElementById('btnSubmit').disabled = false;
+                    }
+                });
+            });
+        }
+
+        // --- 6. FUNGSI MEMUAT DAFTAR SISWA (DENGAN PAGINATION) ---
+        async function loadStudentList() {
+            const grid = document.getElementById('gridSiswa');
+            const loading = document.getElementById('loadingDaftar');
+            const paginationCtrls = document.getElementById('paginationControls');
+            
+            grid.classList.add('hidden');
+            paginationCtrls.classList.add('hidden');
+            loading.classList.remove('hidden');
 
             try {
-                const response = await fetch(API_URL, {
-                    method: "POST",
-                    body: JSON.stringify(payload),
-                    headers: { "Content-Type": "text/plain;charset=utf-8" } 
-                });
+                const response = await fetch(API_URL);
                 const result = await response.json();
                 
                 if(result.status === "success") {
-                    Swal.fire('Terkirim!', 'Data dan lokasi rumah Anda berhasil disimpan.', 'success').then(() => {
-                        document.getElementById('formSiswa').reset();
-                        loadStudentList(); 
-                    });
-                } else {
-                    Swal.fire('Gagal Menyimpan', result.message, 'error');
+                    dataSiswaList = result.data; 
+                    
+                    // Saring data kosong
+                    allValidStudents = dataSiswaList.filter(s => s.nama && s.nama.trim() !== "");
+                    
+                    // Mulai dari halaman 1
+                    displayStudentsList(1);
                 }
             } catch (error) {
-                Swal.fire('Error Koneksi', 'Gagal menghubungi server.', 'error');
+                console.error("Error Muat Daftar:", error);
+                grid.innerHTML = "<div class='col-span-3 text-center text-xs text-red-500'>Gagal memuat data.</div>";
+                grid.classList.remove('hidden');
             } finally {
-                document.getElementById('btnText').classList.remove('hidden');
-                document.getElementById('btnLoading').classList.add('hidden');
-                document.getElementById('btnSubmit').disabled = false;
+                loading.classList.add('hidden');
             }
-        });
-    });
-}
+        }
 
-// --- 6. FUNGSI MEMUAT DAFTAR SISWA (DENGAN FILTER BARIS KOSONG) ---
-async function loadStudentList() {
-    const grid = document.getElementById('gridSiswa');
-    const loading = document.getElementById('loadingDaftar');
-    
-    grid.classList.add('hidden');
-    loading.classList.remove('hidden');
-
-    try {
-        const response = await fetch(API_URL);
-        const result = await response.json();
-        
-        if(result.status === "success") {
-            dataSiswaList = result.data; 
+        function displayStudentsList(page) {
+            const grid = document.getElementById('gridSiswa');
+            const paginationCtrls = document.getElementById('paginationControls');
+            
             grid.innerHTML = "";
-            
-            // Filter agar hanya siswa yang ada namanya yang dihitung
-            const dataValid = dataSiswaList.filter(s => s.nama && s.nama.trim() !== "");
+            paginationCtrls.innerHTML = "";
 
-            if(dataValid.length === 0) {
+            if(allValidStudents.length === 0) {
                 grid.innerHTML = "<div class='col-span-3 text-center text-xs text-slate-500'>Belum ada siswa terdaftar.</div>";
-            } else {
-                dataValid.forEach(siswa => {
-                    let namaPendek = siswa.nama.split(" ")[0]; 
-                    let html = `<div class="bg-green-100 text-green-800 text-[10px] sm:text-xs font-semibold px-2 py-1.5 rounded-md text-center truncate border border-green-200">
-                                    <i class="fa-solid fa-check-circle mr-1"></i> ${namaPendek}
-                                </div>`;
-                    grid.innerHTML += html;
-                });
+                grid.classList.remove('hidden');
+                return;
+            }
+
+            currentPage = page;
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const paginatedItems = allValidStudents.slice(start, end);
+
+            paginatedItems.forEach(siswa => {
+                let html = `<div class="bg-green-100 text-green-800 text-[10px] sm:text-xs font-semibold px-2 py-1.5 rounded-md text-center break-words leading-tight border border-green-200 shadow-sm flex items-center justify-center min-h-[40px]">
+                                <span><i class="fa-solid fa-check-circle mr-1"></i> ${siswa.nama}</span>
+                            </div>`;
+                grid.innerHTML += html;
+            });
+
+            grid.classList.remove('hidden');
+            setupPagination();
+        }
+
+        function setupPagination() {
+            const paginationCtrls = document.getElementById('paginationControls');
+            const pageCount = Math.ceil(allValidStudents.length / itemsPerPage);
+
+            if (pageCount <= 1) return; 
+
+            let html = '';
+            
+            if (currentPage > 1) {
+                html += `<button onclick="displayStudentsList(${currentPage - 1})" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded text-slate-600 text-sm shadow-sm transition"><i class="fa-solid fa-chevron-left"></i></button>`;
+            }
+
+            for (let i = 1; i <= pageCount; i++) {
+                if (i === currentPage) {
+                    html += `<button class="px-3 py-1 bg-blue-600 border border-blue-600 text-white rounded font-bold text-sm shadow-sm">${i}</button>`;
+                } else {
+                    html += `<button onclick="displayStudentsList(${i})" class="px-3 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded text-slate-600 text-sm shadow-sm transition">${i}</button>`;
+                }
+            }
+
+            if (currentPage < pageCount) {
+                html += `<button onclick="displayStudentsList(${currentPage + 1})" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded text-slate-600 text-sm shadow-sm transition"><i class="fa-solid fa-chevron-right"></i></button>`;
+            }
+
+            paginationCtrls.innerHTML = html;
+            paginationCtrls.classList.remove('hidden');
+        }
+
+        // --- 7. FUNGSI INISIALISASI PETA (DENGAN TOMBOL WA & GOOGLE MAPS ROUTING) ---
+        async function initMap() {
+            if (globalMap !== null) {
+                globalMap.remove(); 
+            }
+
+            globalMap = L.map('map').setView([-6.9859, 109.6056], 12);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors | Web Siswa TKJ'
+            }).addTo(globalMap);
+
+            Swal.fire({ title: 'Memuat Peta...', text: 'Mengambil data dari server', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+
+            try {
+                const response = await fetch(API_URL);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if(result.status === "success") {
+                    const data = result.data;
+                    markersLayer = []; 
+                    let jumlahMarkerValid = 0;
+                    
+                    data.forEach(siswa => {
+                        let rawLat = String(siswa.latitude).replace(',', '.');
+                        let rawLng = String(siswa.longitude).replace(',', '.');
+                        let finalLat = parseFloat(rawLat);
+                        let finalLng = parseFloat(rawLng);
+
+                        if(!isNaN(finalLat) && !isNaN(finalLng) && finalLat !== 0) {
+                            
+                            let kontakS = siswa.kontakSiswa ? String(siswa.kontakSiswa).replace(/^0+/, '') : "-";
+                            let kontakO = siswa.kontakOrtu ? String(siswa.kontakOrtu).replace(/^0+/, '') : "-";
+
+                            let popupHTML = `
+                                <div style="min-width: 220px; font-family: sans-serif;">
+                                    <h3 style="font-size:16px; font-weight:bold; margin-bottom:5px; border-bottom: 1px solid #ccc; padding-bottom:5px;">
+                                        ${siswa.nama} <br><span style="font-size:12px; font-weight:normal; color:#666;">NISN: ${siswa.nisn || '-'}</span>
+                                    </h3>
+                                    
+                                    <div style="display:flex; gap:5px; margin-bottom:10px;">
+                                        <div style="width:50%;">
+                                            <div style="font-size:10px; color:#555;">Foto Siswa:</div>
+                                            ${siswa.fotoSiswa ? `<a href="${siswa.fotoSiswa}" target="_blank"><img src="${siswa.fotoSiswa}" class="popup-img" alt="Selfie"></a>` : '<div style="background:#eee; height:120px; display:flex; align-items:center; justify-content:center; font-size:10px;">No Image</div>'}
+                                        </div>
+                                        <div style="width:50%;">
+                                            <div style="font-size:10px; color:#555;">Foto Rumah:</div>
+                                            ${siswa.fotoRumah ? `<a href="${siswa.fotoRumah}" target="_blank"><img src="${siswa.fotoRumah}" class="popup-img" alt="Rumah"></a>` : '<div style="background:#eee; height:120px; display:flex; align-items:center; justify-content:center; font-size:10px;">No Image</div>'}
+                                        </div>
+                                    </div>
+                                    
+                                    <p style="font-size:12px; margin-bottom:5px;"><b>Alamat:</b> <br>${siswa.alamat || '-'}</p>
+                                    
+                                    <div style="display:flex; gap:5px; margin-top:10px;">
+                                        <a href="https://wa.me/62${kontakS}" target="_blank" style="flex:1; background:#25D366; color:white; text-align:center; padding:6px; border-radius:5px; text-decoration:none; font-size:11px; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                            <i class="fa-brands fa-whatsapp"></i> Chat Siswa
+                                        </a>
+                                        <a href="https://wa.me/62${kontakO}" target="_blank" style="flex:1; background:#128C7E; color:white; text-align:center; padding:6px; border-radius:5px; text-decoration:none; font-size:11px; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                            <i class="fa-brands fa-whatsapp"></i> Chat Ortu
+                                        </a>
+                                    </div>
+
+                                    <a href="https://www.google.com/maps/dir/?api=1&destination=${finalLat},${finalLng}" target="_blank" style="display:block; background:#4285F4; color:white; text-align:center; padding:8px; border-radius:5px; text-decoration:none; font-size:13px; font-weight:bold; margin-top:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                                        <i class="fa-solid fa-route"></i> Petunjuk Arah Ke Sini
+                                    </a>
+                                </div>
+                            `;
+
+                            let marker = L.marker([finalLat, finalLng])
+                                .bindTooltip(siswa.nama || 'Tanpa Nama', { permanent: true, direction: 'top', offset: [0, -20], className: 'leaflet-tooltip' })
+                                .bindPopup(popupHTML);
+                                
+                            marker.addTo(globalMap);
+                            marker.namaSiswa = siswa.nama ? siswa.nama.toLowerCase() : "";
+                            markersLayer.push(marker);
+                            
+                            jumlahMarkerValid++;
+                        }
+                    });
+                    
+                    Swal.close();
+
+                    if(jumlahMarkerValid === 0) {
+                        Swal.fire('Info', 'Belum ada data dengan koordinat lokasi yang bisa digambar di peta.', 'info');
+                    }
+
+                } else {
+                     Swal.fire('Error API', result.message, 'error');
+                }
+            } catch (error) {
+                console.error("Error Detail Peta:", error); 
+                Swal.fire('Error', 'Gagal memuat titik peta. Silakan cek koneksi atau format data.', 'error');
             }
         }
-    } catch (error) {
-        console.error("Error Muat Daftar:", error);
-        grid.innerHTML = "<div class='col-span-3 text-center text-xs text-red-500'>Gagal memuat data.</div>";
-    } finally {
-        loading.classList.add('hidden');
-        grid.classList.remove('hidden');
-    }
-}
 
-// --- 7. FUNGSI INISIALISASI PETA (DENGAN TOMBOL ARAH & WA) ---
-async function initMap() {
-    if (globalMap !== null) {
-        globalMap.remove(); 
-    }
-
-    globalMap = L.map('map').setView([-6.9859, 109.6056], 12);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors | GIS Walas IG'
-    }).addTo(globalMap);
-
-    Swal.fire({ title: 'Memuat Peta...', text: 'Mengambil data dari server', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
-
-    try {
-        const response = await fetch(API_URL);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        
-        if(result.status === "success") {
-            const data = result.data;
-            markersLayer = []; 
-            let jumlahMarkerValid = 0;
+        // --- 8. FUNGSI PENCARIAN DI PETA ---
+        function searchMarker() {
+            let keyword = document.getElementById('searchMap').value.toLowerCase();
             
-            data.forEach(siswa => {
-                let rawLat = String(siswa.latitude).replace(',', '.');
-                let rawLng = String(siswa.longitude).replace(',', '.');
-                let finalLat = parseFloat(rawLat);
-                let finalLng = parseFloat(rawLng);
-
-                if(!isNaN(finalLat) && !isNaN(finalLng) && finalLat !== 0) {
-                    
-                    let kontakS = siswa.kontakSiswa ? String(siswa.kontakSiswa).replace(/^0+/, '') : "-";
-                    let kontakO = siswa.kontakOrtu ? String(siswa.kontakOrtu).replace(/^0+/, '') : "-";
-
-                    // PEMBARUAN HTML UNTUK POPUP
-                    let popupHTML = `
-                        <div style="min-width: 220px; font-family: sans-serif;">
-                            <h3 style="font-size:16px; font-weight:bold; margin-bottom:5px; border-bottom: 1px solid #ccc; padding-bottom:5px;">
-                                ${siswa.nama} <br><span style="font-size:12px; font-weight:normal; color:#666;">NISN: ${siswa.nisn || '-'}</span>
-                            </h3>
-                            
-                            <div style="display:flex; gap:5px; margin-bottom:10px;">
-                                <div style="width:50%;">
-                                    <div style="font-size:10px; color:#555;">Foto Siswa:</div>
-                                    ${siswa.fotoSiswa ? `<a href="${siswa.fotoSiswa}" target="_blank"><img src="${siswa.fotoSiswa}" class="popup-img" alt="Selfie"></a>` : '<div style="background:#eee; height:120px; display:flex; align-items:center; justify-content:center; font-size:10px;">No Image</div>'}
-                                </div>
-                                <div style="width:50%;">
-                                    <div style="font-size:10px; color:#555;">Foto Rumah:</div>
-                                    ${siswa.fotoRumah ? `<a href="${siswa.fotoRumah}" target="_blank"><img src="${siswa.fotoRumah}" class="popup-img" alt="Rumah"></a>` : '<div style="background:#eee; height:120px; display:flex; align-items:center; justify-content:center; font-size:10px;">No Image</div>'}
-                                </div>
-                            </div>
-                            
-                            <p style="font-size:12px; margin-bottom:5px;"><b>Alamat:</b> <br>${siswa.alamat || '-'}</p>
-                            
-                            <div style="display:flex; gap:5px; margin-top:10px;">
-                                <a href="https://wa.me/62${kontakS}" target="_blank" style="flex:1; background:#25D366; color:white; text-align:center; padding:6px; border-radius:5px; text-decoration:none; font-size:11px; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                    <i class="fa-brands fa-whatsapp"></i> Chat Siswa
-                                </a>
-                                <a href="https://wa.me/62${kontakO}" target="_blank" style="flex:1; background:#128C7E; color:white; text-align:center; padding:6px; border-radius:5px; text-decoration:none; font-size:11px; font-weight:bold; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                    <i class="fa-brands fa-whatsapp"></i> Chat Ortu
-                                </a>
-                            </div>
-
-                            <a href="https://www.google.com/maps/dir/?api=1&destination=${finalLat},${finalLng}" target="_blank" style="display:block; background:#4285F4; color:white; text-align:center; padding:8px; border-radius:5px; text-decoration:none; font-size:13px; font-weight:bold; margin-top:8px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-                                <i class="fa-solid fa-route"></i> Petunjuk Arah Ke Sini
-                            </a>
-                        </div>
-                    `;
-
-                    let marker = L.marker([finalLat, finalLng])
-                        .bindTooltip(siswa.nama || 'Tanpa Nama', { permanent: true, direction: 'top', offset: [0, -20], className: 'leaflet-tooltip' })
-                        .bindPopup(popupHTML);
-                        
-                    marker.addTo(globalMap);
-                    marker.namaSiswa = siswa.nama ? siswa.nama.toLowerCase() : "";
-                    markersLayer.push(marker);
-                    
-                    jumlahMarkerValid++;
+            markersLayer.forEach(marker => {
+                if (marker.namaSiswa.includes(keyword)) {
+                    marker.setOpacity(1); 
+                    marker.getTooltip().setOpacity(1);
+                } else {
+                    marker.setOpacity(0.2); 
+                    marker.getTooltip().setOpacity(0);
                 }
             });
-            
-            Swal.close();
-
-            if(jumlahMarkerValid === 0) {
-                Swal.fire('Info', 'Belum ada data dengan koordinat lokasi yang bisa digambar di peta.', 'info');
-            }
-
-        } else {
-             Swal.fire('Error API', result.message, 'error');
         }
-    } catch (error) {
-        console.error("Error Detail Peta:", error); 
-        Swal.fire('Error', 'Gagal memuat titik peta. Silakan cek koneksi atau format data.', 'error');
-    }
-}
-
-// --- 8. FUNGSI PENCARIAN DI PETA ---
-function searchMarker() {
-    let keyword = document.getElementById('searchMap').value.toLowerCase();
-    
-    markersLayer.forEach(marker => {
-        if (marker.namaSiswa.includes(keyword)) {
-            marker.setOpacity(1); 
-            marker.getTooltip().setOpacity(1);
-        } else {
-            marker.setOpacity(0.2); 
-            marker.getTooltip().setOpacity(0);
-        }
-    });
-}
     </script>
 </body>
 </html>

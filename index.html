@@ -329,7 +329,7 @@ async function loadStudentList() {
     }
 }
 
-// --- 7. FUNGSI INISIALISASI PETA (DENGAN FILTER KOORDINAT KOSONG) ---
+// --- 7. FUNGSI INISIALISASI PETA (VERSI SUPER AMAN) ---
 async function initMap() {
     if (globalMap !== null) {
         globalMap.remove(); 
@@ -345,6 +345,12 @@ async function initMap() {
 
     try {
         const response = await fetch(API_URL);
+        
+        // Cek apakah response benar-benar OK sebelum di-parse
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const result = await response.json();
         
         if(result.status === "success") {
@@ -353,12 +359,23 @@ async function initMap() {
             let jumlahMarkerValid = 0;
             
             data.forEach(siswa => {
-                // CEK KRUSIAL: Pastikan koordinat ada dan bukan baris kosong
-                if(siswa.latitude && siswa.longitude && siswa.latitude !== "" && siswa.longitude !== "") {
+                // Konversi paksa latitude & longitude ke string, ganti koma dengan titik, lalu jadikan angka desimal (float)
+                let rawLat = String(siswa.latitude).replace(',', '.');
+                let rawLng = String(siswa.longitude).replace(',', '.');
+                let finalLat = parseFloat(rawLat);
+                let finalLng = parseFloat(rawLng);
+
+                // Pastikan hasilnya adalah angka yang valid (bukan NaN) dan bukan 0
+                if(!isNaN(finalLat) && !isNaN(finalLng) && finalLat !== 0) {
+                    
+                    // Amankan data kontak agar tidak error jika kosong
+                    let kontakS = siswa.kontakSiswa ? String(siswa.kontakSiswa).replace(/^0+/, '') : "-";
+                    let kontakO = siswa.kontakOrtu ? String(siswa.kontakOrtu).replace(/^0+/, '') : "-";
+
                     let popupHTML = `
                         <div style="min-width: 220px; font-family: sans-serif;">
                             <h3 style="font-size:16px; font-weight:bold; margin-bottom:5px; border-bottom: 1px solid #ccc; padding-bottom:5px;">
-                                ${siswa.nama} <br><span style="font-size:12px; font-weight:normal; color:#666;">NISN: ${siswa.nisn}</span>
+                                ${siswa.nama} <br><span style="font-size:12px; font-weight:normal; color:#666;">NISN: ${siswa.nisn || '-'}</span>
                             </h3>
                             
                             <div style="display:flex; gap:5px; margin-bottom:10px;">
@@ -372,17 +389,17 @@ async function initMap() {
                                 </div>
                             </div>
                             
-                            <p style="font-size:12px; margin-bottom:5px;"><b>Alamat:</b> <br>${siswa.alamat}</p>
+                            <p style="font-size:12px; margin-bottom:5px;"><b>Alamat:</b> <br>${siswa.alamat || '-'}</p>
                             
                             <div style="background:#f8fafc; padding:5px; border-radius:5px; margin-top:10px;">
-                                <p style="font-size:11px; margin:2px 0;"><b>HP Siswa:</b> <a href="https://wa.me/62${String(siswa.kontakSiswa).replace(/^0+/, '')}" target="_blank" style="color:#16a34a; text-decoration:none;"><i class="fa-brands fa-whatsapp"></i> ${siswa.kontakSiswa}</a></p>
-                                <p style="font-size:11px; margin:2px 0;"><b>Ortu (${siswa.namaOrtu}):</b> <a href="https://wa.me/62${String(siswa.kontakOrtu).replace(/^0+/, '')}" target="_blank" style="color:#16a34a; text-decoration:none;"><i class="fa-brands fa-whatsapp"></i> ${siswa.kontakOrtu}</a></p>
+                                <p style="font-size:11px; margin:2px 0;"><b>HP Siswa:</b> <a href="https://wa.me/62${kontakS}" target="_blank" style="color:#16a34a; text-decoration:none;"><i class="fa-brands fa-whatsapp"></i> 0${kontakS}</a></p>
+                                <p style="font-size:11px; margin:2px 0;"><b>Ortu (${siswa.namaOrtu || '-'}):</b> <a href="https://wa.me/62${kontakO}" target="_blank" style="color:#16a34a; text-decoration:none;"><i class="fa-brands fa-whatsapp"></i> 0${kontakO}</a></p>
                             </div>
                         </div>
                     `;
 
-                    let marker = L.marker([siswa.latitude, siswa.longitude])
-                        .bindTooltip(siswa.nama, { permanent: true, direction: 'top', offset: [0, -20], className: 'leaflet-tooltip' })
+                    let marker = L.marker([finalLat, finalLng])
+                        .bindTooltip(siswa.nama || 'Tanpa Nama', { permanent: true, direction: 'top', offset: [0, -20], className: 'leaflet-tooltip' })
                         .bindPopup(popupHTML);
                         
                     marker.addTo(globalMap);
@@ -395,9 +412,8 @@ async function initMap() {
             
             Swal.close();
 
-            // Peringatan jika ternyata semua baris kosong
             if(jumlahMarkerValid === 0) {
-                Swal.fire('Info', 'Data siswa berhasil dimuat, tapi belum ada koordinat lokasi yang valid.', 'info');
+                Swal.fire('Info', 'Belum ada data dengan koordinat lokasi yang bisa digambar di peta.', 'info');
             }
 
         } else {
@@ -405,7 +421,7 @@ async function initMap() {
         }
     } catch (error) {
         console.error("Error Detail Peta:", error); 
-        Swal.fire('Error', 'Gagal memuat titik peta. Cek *Console* browser untuk detailnya.', 'error');
+        Swal.fire('Error', 'Gagal memuat titik peta. Silakan cek koneksi atau format data.', 'error');
     }
 }
 

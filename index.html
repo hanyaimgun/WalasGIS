@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sistem Pemetaan Lokasi Siswa TKJ</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* CSS Tambahan untuk kustomisasi peta */
+        #map { height: calc(100vh - 60px); width: 100%; z-index: 1; }
+        .leaflet-tooltip { font-weight: bold; color: #1e3a8a; border: 2px solid #3b82f6; }
+        .popup-img { width: 100%; height: 120px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; }
+        .hidden-page { display: none !important; }
+        /* Animasi loading sederhana */
+        .spinner { border: 4px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 4px solid #fff; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-800">
+
+    <div id="landingPage" class="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-600 to-indigo-800">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl text-center w-full max-w-md">
+            <div class="bg-blue-100 text-blue-600 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-map-location-dot text-4xl"></i>
+            </div>
+            <h1 class="text-2xl font-bold mb-2">GIS Siswa TKJ</h1>
+            <p class="text-slate-500 mb-8 text-sm">Sistem Lapor Lokasi & Pendataan Domisili Siswa</p>
+            
+            <button onclick="showPage('studentPage'); loadStudentList();" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl mb-4 transition duration-300 shadow-lg flex items-center justify-center gap-2">
+                <i class="fa-solid fa-user-graduate"></i> Saya Siswa (Lapor Lokasi)
+            </button>
+            <button onclick="loginTeacher()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-4 rounded-xl transition duration-300 shadow-lg flex items-center justify-center gap-2">
+                <i class="fa-solid fa-chalkboard-user"></i> Dashboard Wali Kelas
+            </button>
+        </div>
+    </div>
+
+    <div id="studentPage" class="hidden-page min-h-screen flex flex-col items-center p-4">
+        
+        <div class="w-full max-w-md flex items-center mb-4">
+            <button onclick="showPage('landingPage')" class="bg-white text-slate-600 p-2 rounded-lg shadow mr-3">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h2 class="text-lg font-bold">Formulir Lapor Lokasi</h2>
+        </div>
+
+        <div class="w-full max-w-md bg-white p-5 rounded-2xl shadow-md mb-6">
+            <form id="formSiswa" onsubmit="submitData(event)">
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold mb-1">Nama Lengkap</label>
+                    <input type="text" id="nama" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-500">
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold mb-1">NISN</label>
+                    <input type="number" id="nisn" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-500">
+                </div>
+
+                <div class="mb-4 bg-blue-50 p-3 rounded-lg border border-blue-100">
+                    <button type="button" onclick="getLocation()" class="w-full bg-blue-500 text-white font-bold py-2 rounded-lg mb-2 text-sm shadow">
+                        <i class="fa-solid fa-location-crosshairs mr-1"></i> Kunci Koordinat Saat Ini
+                    </button>
+                    <div class="flex gap-2 text-xs">
+                        <input type="text" id="lat" placeholder="Latitude" readonly required class="w-1/2 bg-white border border-slate-200 rounded p-1.5 text-center text-slate-500">
+                        <input type="text" id="lng" placeholder="Longitude" readonly required class="w-1/2 bg-white border border-slate-200 rounded p-1.5 text-center text-slate-500">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold mb-1">Alamat Lengkap</label>
+                    <textarea id="alamat" rows="2" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-500"></textarea>
+                </div>
+
+                <div class="flex gap-3 mb-4">
+                    <div class="w-1/2">
+                        <label class="block text-xs font-semibold mb-1">No. WA Siswa</label>
+                        <input type="number" id="kontakSiswa" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none focus:border-blue-500 text-sm">
+                    </div>
+                    <div class="w-1/2">
+                        <label class="block text-xs font-semibold mb-1">No. WA Orang Tua</label>
+                        <input type="number" id="kontakOrtu" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2 outline-none focus:border-blue-500 text-sm">
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold mb-1">Nama Orang Tua / Wali</label>
+                    <input type="text" id="namaOrtu" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 outline-none focus:border-blue-500 text-sm">
+                </div>
+
+                <div class="mb-4 border-t pt-4">
+                    <label class="block text-sm font-semibold mb-2"><i class="fa-solid fa-camera mr-1"></i> Upload Bukti Foto</label>
+                    <div class="text-xs mb-1 text-slate-500">Foto Wajah (Selfie):</div>
+                    <input type="file" id="fotoSiswa" accept="image/*" capture="user" required class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 mb-3"/>
+                    
+                    <div class="text-xs mb-1 text-slate-500">Foto Tampak Depan Rumah:</div>
+                    <input type="file" id="fotoRumah" accept="image/*" capture="environment" required class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"/>
+                </div>
+
+                <button type="submit" id="btnSubmit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition duration-300 shadow-md">
+                    <span id="btnText"><i class="fa-solid fa-paper-plane mr-1"></i> Kirim Data Lokasi</span>
+                    <span id="btnLoading" class="hidden"><div class="spinner"></div> Mengirim...</span>
+                </button>
+            </form>
+        </div>
+
+        <div class="w-full max-w-md bg-white p-5 rounded-2xl shadow-md mb-8">
+            <h3 class="text-sm font-bold text-center mb-3 text-slate-600"><i class="fa-solid fa-list-check mr-1"></i> Status Pendaftaran Kelas</h3>
+            <div id="loadingDaftar" class="text-center text-xs text-slate-400 py-4">Memuat data...</div>
+            <div id="gridSiswa" class="grid grid-cols-3 gap-2 hidden">
+                </div>
+        </div>
+    </div>
+
+    <div id="teacherPage" class="hidden-page flex flex-col h-screen">
+        <div class="bg-slate-900 text-white h-[60px] flex items-center justify-between px-4 shadow-lg z-10">
+            <div class="flex items-center gap-3">
+                <button onclick="showPage('landingPage')" class="text-slate-300 hover:text-white"><i class="fa-solid fa-right-from-bracket rotate-180"></i></button>
+                <h2 class="font-bold hidden sm:block">Dashboard Pemetaan</h2>
+            </div>
+            <div class="flex bg-slate-800 rounded-lg overflow-hidden border border-slate-700">
+                <input type="text" id="searchMap" placeholder="Cari Siswa..." onkeyup="searchMarker()" class="bg-transparent px-3 py-1 text-sm outline-none w-32 sm:w-48">
+                <button class="px-3 text-slate-400"><i class="fa-solid fa-magnifying-glass"></i></button>
+            </div>
+        </div>
+        
+        <div id="map"></div>
+    </div>
+
+    <script>
+        // API URL Google Apps Script Anda
+        const API_URL = "https://script.google.com/macros/s/AKfycbzVtL9HmKdHNqf6qCa7gU_OCCSURaskGMrLEhUDjGK9uppQenYRQg0s6UYya5LnavUR/exec";
+        
+        let globalMap = null;
+        let markersLayer = []; // Untuk fitur pencarian
+        let dataSiswaList = []; // Simpan data mentah
+        
+        // --- 1. FUNGSI NAVIGASI HALAMAN ---
+        function showPage(pageId) {
+            document.getElementById('landingPage').classList.add('hidden-page');
+            document.getElementById('studentPage').classList.add('hidden-page');
+            document.getElementById('teacherPage').classList.add('hidden-page');
+            document.getElementById(pageId).classList.remove('hidden-page');
+        }
+
+        // --- 2. FUNGSI OTORISASI WALI KELAS ---
+        function loginTeacher() {
+            Swal.fire({
+                title: 'Akses Keamanan',
+                input: 'password',
+                inputLabel: 'Masukkan Password Wali Kelas',
+                inputPlaceholder: 'Password...',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Masuk'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    if (result.value === "Pekalongan123") {
+                        showPage('teacherPage');
+                        initMap(); // Muat peta setelah login berhasil
+                    } else {
+                        Swal.fire('Akses Ditolak', 'Password yang Anda masukkan salah.', 'error');
+                    }
+                }
+            });
+        }
+
+        // --- 3. FUNGSI GPS (GEOLOCATION) ---
+        function getLocation() {
+            if (navigator.geolocation) {
+                Swal.fire({ title: 'Mencari Lokasi...', text: 'Pastikan GPS HP Anda menyala.', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        document.getElementById('lat').value = position.coords.latitude;
+                        document.getElementById('lng').value = position.coords.longitude;
+                        Swal.fire('Berhasil!', 'Koordinat Anda telah dikunci.', 'success');
+                    },
+                    function(error) {
+                        Swal.fire('Gagal Akses GPS', 'Tolong izinkan akses lokasi (Location/GPS) di browser Anda.', 'error');
+                    },
+                    { enableHighAccuracy: true }
+                );
+            } else {
+                Swal.fire('Error', 'Browser Anda tidak mendukung Geolocation.', 'error');
+            }
+        }
+
+        // --- 4. FUNGSI KOMPRESI & BASE64 GAMBAR (MENCEGAH FILE TERLALU BESAR) ---
+        function compressAndEncodeImage(file, callback) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = function(event) {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800; // Resolusi maksimal
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // Kompresi ke format JPEG kualitas 70%
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                    callback(dataUrl);
+                }
+            }
+        }
+
+        // --- 5. FUNGSI SUBMIT FORM KE GOOGLE SHEETS ---
+        async function submitData(e) {
+            e.preventDefault();
+            
+            // Validasi GPS
+            if(!document.getElementById('lat').value || !document.getElementById('lng').value){
+                Swal.fire('Peringatan', 'Mohon kunci koordinat lokasi Anda terlebih dahulu dengan menekan tombol biru!', 'warning');
+                return;
+            }
+
+            // Validasi apakah NISN sudah terdaftar
+            const nisnInput = document.getElementById('nisn').value;
+            const isExist = dataSiswaList.find(s => s.nisn == nisnInput);
+            if(isExist) {
+                Swal.fire('Ditolak', 'NISN Anda sudah terdaftar di sistem. Anda tidak perlu mengisi dua kali.', 'error');
+                return;
+            }
+
+            // UI Loading State
+            document.getElementById('btnText').classList.add('hidden');
+            document.getElementById('btnLoading').classList.remove('hidden');
+            document.getElementById('btnSubmit').disabled = true;
+
+            const fileSiswa = document.getElementById('fotoSiswa').files[0];
+            const fileRumah = document.getElementById('fotoRumah').files[0];
+
+            // Proses gambar 1
+            compressAndEncodeImage(fileSiswa, function(base64Siswa) {
+                // Proses gambar 2
+                compressAndEncodeImage(fileRumah, async function(base64Rumah) {
+                    
+                    // Siapkan payload JSON
+                    const payload = {
+                        nama: document.getElementById('nama').value,
+                        nisn: nisnInput,
+                        latitude: document.getElementById('lat').value,
+                        longitude: document.getElementById('lng').value,
+                        alamat: document.getElementById('alamat').value,
+                        kontakSiswa: document.getElementById('kontakSiswa').value,
+                        namaOrtu: document.getElementById('namaOrtu').value,
+                        kontakOrtu: document.getElementById('kontakOrtu').value,
+                        fotoSiswa: base64Siswa,
+                        fotoRumah: base64Rumah
+                    };
+
+                    try {
+                        // Kirim POST request ke Apps Script
+                        const response = await fetch(API_URL, {
+                            method: "POST",
+                            body: JSON.stringify(payload),
+                            headers: { "Content-Type": "text/plain;charset=utf-8" } 
+                            // Menggunakan text/plain untuk menghindari CORS Preflight strict di beberapa browser HP
+                        });
+                        const result = await response.json();
+                        
+                        if(result.status === "success") {
+                            Swal.fire('Terkirim!', 'Terima kasih, data dan lokasi rumah Anda berhasil disimpan.', 'success').then(() => {
+                                document.getElementById('formSiswa').reset();
+                                loadStudentList(); // Refresh daftar siswa di bawah
+                            });
+                        } else {
+                            Swal.fire('Gagal Menyimpan', result.message, 'error');
+                        }
+                    } catch (error) {
+                        Swal.fire('Error Koneksi', 'Gagal menghubungi server. Pastikan sinyal internet lancar.', 'error');
+                    } finally {
+                        // Kembalikan tombol seperti semula
+                        document.getElementById('btnText').classList.remove('hidden');
+                        document.getElementById('btnLoading').classList.add('hidden');
+                        document.getElementById('btnSubmit').disabled = false;
+                    }
+                });
+            });
+        }
+
+        // --- 6. FUNGSI MEMUAT DAFTAR SISWA (3 KOLOM) ---
+        async function loadStudentList() {
+            const grid = document.getElementById('gridSiswa');
+            const loading = document.getElementById('loadingDaftar');
+            
+            grid.classList.add('hidden');
+            loading.classList.remove('hidden');
+
+            try {
+                const response = await fetch(API_URL);
+                const result = await response.json();
+                
+                if(result.status === "success") {
+                    dataSiswaList = result.data; // Simpan untuk validasi ganda
+                    grid.innerHTML = "";
+                    
+                    if(dataSiswaList.length === 0) {
+                        grid.innerHTML = "<div class='col-span-3 text-center text-xs text-slate-500'>Belum ada siswa terdaftar.</div>";
+                    } else {
+                        // Render ke dalam 3 kolom dengan tampilan pill
+                        dataSiswaList.forEach(siswa => {
+                            // Potong nama depan saja agar muat di kolom kecil
+                            let namaPendek = siswa.nama.split(" ")[0]; 
+                            let html = `<div class="bg-green-100 text-green-800 text-[10px] sm:text-xs font-semibold px-2 py-1.5 rounded-md text-center truncate border border-green-200">
+                                            <i class="fa-solid fa-check-circle mr-1"></i> ${namaPendek}
+                                        </div>`;
+                            grid.innerHTML += html;
+                        });
+                    }
+                }
+            } catch (error) {
+                grid.innerHTML = "<div class='col-span-3 text-center text-xs text-red-500'>Gagal memuat data.</div>";
+            } finally {
+                loading.classList.add('hidden');
+                grid.classList.remove('hidden');
+            }
+        }
+
+        // --- 7. FUNGSI INISIALISASI PETA & POPUP (WALI KELAS) ---
+        async function initMap() {
+            // Cek apakah peta sudah pernah di-render agar tidak error
+            if (globalMap !== null) {
+                globalMap.remove(); 
+            }
+
+            // Atur view default ke area Kabupaten Pekalongan (-6.9859, 109.6056)
+            globalMap = L.map('map').setView([-6.9859, 109.6056], 12);
+
+            // Gunakan TileLayer gratis dari OpenStreetMap
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors | Web Siswa TKJ'
+            }).addTo(globalMap);
+
+            Swal.fire({ title: 'Memuat Peta...', text: 'Mengambil data dari server', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+
+            try {
+                const response = await fetch(API_URL);
+                const result = await response.json();
+                
+                if(result.status === "success") {
+                    const data = result.data;
+                    markersLayer = []; // Reset memori marker
+                    
+                    data.forEach(siswa => {
+                        // Parsing HTML untuk Popup yang sangat lengkap dan rapi
+                        let popupHTML = `
+                            <div style="min-width: 220px; font-family: sans-serif;">
+                                <h3 style="font-size:16px; font-weight:bold; margin-bottom:5px; border-bottom: 1px solid #ccc; padding-bottom:5px;">
+                                    ${siswa.nama} <br><span style="font-size:12px; font-weight:normal; color:#666;">NISN: ${siswa.nisn}</span>
+                                </h3>
+                                
+                                <div style="display:flex; gap:5px; margin-bottom:10px;">
+                                    <div style="width:50%;">
+                                        <div style="font-size:10px; color:#555;">Foto Siswa:</div>
+                                        ${siswa.fotoSiswa ? `<a href="${siswa.fotoSiswa}" target="_blank"><img src="${siswa.fotoSiswa}" class="popup-img" alt="Selfie"></a>` : '<div style="background:#eee; height:120px; display:flex; align-items:center; justify-content:center; font-size:10px;">No Image</div>'}
+                                    </div>
+                                    <div style="width:50%;">
+                                        <div style="font-size:10px; color:#555;">Foto Rumah:</div>
+                                        ${siswa.fotoRumah ? `<a href="${siswa.fotoRumah}" target="_blank"><img src="${siswa.fotoRumah}" class="popup-img" alt="Rumah"></a>` : '<div style="background:#eee; height:120px; display:flex; align-items:center; justify-content:center; font-size:10px;">No Image</div>'}
+                                    </div>
+                                </div>
+                                
+                                <p style="font-size:12px; margin-bottom:5px;"><b>Alamat:</b> <br>${siswa.alamat}</p>
+                                
+                                <div style="background:#f8fafc; padding:5px; border-radius:5px; margin-top:10px;">
+                                    <p style="font-size:11px; margin:2px 0;"><b>HP Siswa:</b> <a href="https://wa.me/62${siswa.kontakSiswa.replace(/^0+/, '')}" target="_blank" style="color:#16a34a; text-decoration:none;"><i class="fa-brands fa-whatsapp"></i> ${siswa.kontakSiswa}</a></p>
+                                    <p style="font-size:11px; margin:2px 0;"><b>Ortu (${siswa.namaOrtu}):</b> <a href="https://wa.me/62${siswa.kontakOrtu.replace(/^0+/, '')}" target="_blank" style="color:#16a34a; text-decoration:none;"><i class="fa-brands fa-whatsapp"></i> ${siswa.kontakOrtu}</a></p>
+                                </div>
+                            </div>
+                        `;
+
+                        // Buat Marker dengan Tooltip (Nama Permanen)
+                        let marker = L.marker([siswa.latitude, siswa.longitude])
+                            .bindTooltip(siswa.nama, { permanent: true, direction: 'top', offset: [0, -20], className: 'leaflet-tooltip' })
+                            .bindPopup(popupHTML);
+                            
+                        marker.addTo(globalMap);
+                        
+                        // Simpan properti nama ke objek marker untuk fitur Search
+                        marker.namaSiswa = siswa.nama.toLowerCase();
+                        markersLayer.push(marker);
+                    });
+                    
+                    Swal.close();
+                }
+            } catch (error) {
+                Swal.fire('Error', 'Gagal memuat titik peta.', 'error');
+            }
+        }
+
+        // --- 8. FUNGSI PENCARIAN DI PETA ---
+        function searchMarker() {
+            let keyword = document.getElementById('searchMap').value.toLowerCase();
+            
+            markersLayer.forEach(marker => {
+                if (marker.namaSiswa.includes(keyword)) {
+                    marker.setOpacity(1); // Tampilkan normal
+                    marker.getTooltip().setOpacity(1);
+                } else {
+                    marker.setOpacity(0.2); // Samarkan yang tidak cocok
+                    marker.getTooltip().setOpacity(0);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

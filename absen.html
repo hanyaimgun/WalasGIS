@@ -132,17 +132,29 @@
         function generateToken() {
             return 'DEV-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
         }
+        // Fungsi baru untuk mendeteksi jenis browser
+        function getNamaBrowser() {
+            const ua = navigator.userAgent;
+            if (ua.includes("Edg")) return "Microsoft Edge";
+            if (ua.includes("OPR") || ua.includes("Opera")) return "Opera";
+            if (ua.includes("Chrome")) return "Google Chrome";
+            if (ua.includes("Firefox")) return "Mozilla Firefox";
+            if (ua.includes("Safari") && !ua.includes("Chrome")) return "Apple Safari";
+            return "Browser Bawaan HP / Lainnya";
+        }
 
         async function registerDevice(e) {
             e.preventDefault();
             const nisn = document.getElementById('regNisn').value;
             const newToken = generateToken();
+            const infoBrowser = getNamaBrowser(); // Memanggil fungsi pendeteksi
 
             document.getElementById('btnRegText').classList.add('hidden-section');
             document.getElementById('btnRegLoading').classList.remove('hidden-section');
             document.getElementById('btnReg').disabled = true;
 
-            const payload = { action: "register_device", nisn: nisn, token: newToken };
+            // Tambahkan variabel browser ke dalam payload yang dikirim ke server
+            const payload = { action: "register_device", nisn: nisn, token: newToken, browser: infoBrowser };
 
             try {
                 const response = await fetch(API_URL, {
@@ -171,7 +183,7 @@
                 document.getElementById('btnReg').disabled = false;
             }
         }
-
+       
         function prosesAbsen() {
             const btnText = document.getElementById('btnAbsenText');
             const btnLoading = document.getElementById('btnAbsenLoading');

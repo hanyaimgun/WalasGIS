@@ -2,184 +2,141 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Presensi Siswa TKJ</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presensi TKJ - SMK Ma'arif NU Tirto</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <style>
-        .spinner { border: 4px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 4px solid #fff; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .hidden-section { display: none !important; }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
     </style>
 </head>
-<body class="bg-slate-100 font-sans antialiased text-slate-800 min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-teal-500 to-cyan-700">
+<body class="bg-slate-100 min-h-screen flex items-center justify-center p-4 font-sans">
 
-    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative overflow-hidden">
-        
-        <a href="index.html" class="absolute top-4 left-4 text-slate-400 hover:text-slate-600">
-            <i class="fa-solid fa-arrow-left text-xl"></i>
-        </a>
-
-        <div class="text-center mb-6 mt-4">
-            <div class="bg-teal-100 text-teal-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                <i class="fa-solid fa-fingerprint text-3xl"></i>
-            </div>
-            <h1 class="text-xl font-bold">Presensi Harian</h1>
-            <p class="text-slate-500 text-sm">Radius Maksimal: 70 Meter</p>
+    <div class="max-w-md w-full glass-effect rounded-2xl shadow-xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-blue-600 p-6 text-center text-white">
+            <h1 class="text-2xl font-bold mb-1">Presensi Digital TKJ</h1>
+            <p class="text-sm text-blue-100">SMK Ma'arif NU Tirto</p>
         </div>
 
-        <div id="sectionRegister" class="hidden-section">
-            <div class="bg-amber-50 border border-amber-200 text-amber-700 text-xs p-3 rounded-lg mb-4 text-center">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Perhatian:</b> HP ini akan dikunci secara permanen untuk 1 NISN. Jangan gunakan HP teman!
+        <div class="p-6">
+            <!-- Loading Cek Perangkat -->
+            <div id="loadingState" class="text-center py-4">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+                <p class="text-gray-600 text-sm">Mengecek status perangkat...</p>
             </div>
-            
-            <form id="formRegister" onsubmit="registerDevice(event)">
-                <div class="mb-5">
-                    <label class="block text-sm font-semibold mb-1">Masukkan NISN Anda</label>
-                    <input type="number" id="regNisn" placeholder="Contoh: 001234567" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 outline-none focus:border-teal-500 font-mono">
+
+            <!-- Bagian 1: Form Registrasi HP (Hanya muncul jika belum terkunci) -->
+            <div id="formRegistrasi" class="hidden-section">
+                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-md">
+                    <p class="text-sm text-yellow-800 font-medium">
+                        Perhatian: Perangkat ini belum didaftarkan. Satu NISN hanya bisa dikunci pada SATU HP.
+                    </p>
                 </div>
-                <button type="submit" id="btnReg" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition duration-300 shadow-md">
-                    <span id="btnRegText"><i class="fa-solid fa-search mr-1"></i> Cari & Kunci Perangkat</span>
-                    <span id="btnRegLoading" class="hidden-section"><div class="spinner"></div> Sinkronisasi Data...</span>
-                </button>
-            </form>
-        </div>
-
-        <div id="sectionAbsen" class="hidden-section text-center">
-            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
-                <p class="text-xs text-slate-500 mb-1">Login sebagai:</p>
-                <h3 id="displayNama" class="font-bold text-teal-700 text-lg leading-tight">Nama Siswa</h3>
-                <p id="displayNisn" class="text-sm font-mono text-slate-500 mb-2">123456</p>
                 
-                <div id="displayStatus" class="hidden-section bg-green-50 border border-green-200 rounded-lg p-2 mt-2">
-                    <p class="text-xs font-bold text-green-700"><i class="fa-solid fa-circle-check"></i> Anda telah melakukan Presensi Hari Ini</p>
-                    <p id="displayWaktuAbsen" class="text-xs text-green-600 font-semibold mt-1"></p>
-                </div>
+                <form id="regForm" onsubmit="registerDevice(event)">
+                    <div class="mb-5">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Masukkan NISN</label>
+                        <input type="number" id="regNisn" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Contoh: 0012345678">
+                    </div>
+                    <button type="submit" id="btnReg" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex justify-center items-center">
+                        <span id="btnRegText">Kunci Perangkat Ini</span>
+                        <div id="btnRegLoading" class="hidden-section animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    </button>
+                </form>
             </div>
 
-            <button onclick="prosesAbsen()" id="btnAbsen" class="w-40 h-40 bg-teal-500 hover:bg-teal-600 rounded-full text-white font-bold text-2xl shadow-[0_0_20px_rgba(20,184,166,0.5)] transition-all duration-300 active:scale-95 flex flex-col items-center justify-center mx-auto border-4 border-teal-300 relative overflow-hidden group">
-                <i id="iconAbsen" class="fa-solid fa-hand-pointer text-4xl mb-2 group-hover:-translate-y-1 transition-transform"></i>
-                <span id="btnAbsenText">HADIR</span>
-                <div id="btnAbsenLoading" class="hidden-section absolute inset-0 bg-teal-600 flex flex-col items-center justify-center">
-                    <div class="spinner mb-2"></div>
-                    <span class="text-sm font-normal">Mencari GPS...</span>
+            <!-- Bagian 2: Panel Presensi Utama (Muncul jika HP sudah terkunci) -->
+            <div id="panelAbsen" class="hidden-section text-center">
+                <div class="mb-6">
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-3 text-blue-600">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </div>
+                    <h2 id="displayName" class="text-xl font-bold text-gray-800">Nama Siswa</h2>
+                    <p id="displayNisn" class="text-gray-500 text-sm">NISN</p>
                 </div>
-            </button>
-            <p id="teksLokasi" class="text-xs text-slate-400 mt-6"><i class="fa-solid fa-location-dot"></i> Pastikan Anda sudah di dalam area sekolah.</p>
-        </div>
 
+                <div class="bg-gray-50 rounded-lg p-4 mb-6 text-left border border-gray-200">
+                    <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2">Info Perangkat Terkunci</p>
+                    <p class="text-sm text-gray-700 break-all" id="displayToken">Token: -</p>
+                </div>
+
+                <button onclick="catatPresensi()" id="btnAbsen" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all flex justify-center items-center text-lg">
+                    <span id="btnAbsenText">📍 Hadir Sekarang</span>
+                    <div id="btnAbsenLoading" class="hidden-section animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
-        // API URL Anda
-        const API_URL = "https://script.google.com/macros/s/AKfycbyypMfPypXFdEbl-yS5tbMij0hwl3O9CJ17J_kDJ_tsasGuoHi9aoHgin1WQdV0Zhz1/exec";
-        
-        document.addEventListener("DOMContentLoaded", checkDeviceState);
+        // GANTI LINK DI BAWAH INI DENGAN LINK WEB APP GOOGLE APPS SCRIPT ANDA
+        const API_URL = "https://script.google.com/macros/s/AKfycbzL7_S5j0H4tB-W_M8KqD-_0gB-LzT-f_a7eGz7nE6nC9pTzR3N4c0z2q8x1w6_5y/exec";
 
-        function checkDeviceState() {
-            const savedToken = localStorage.getItem('tkj_device_token');
-            const savedNisn = localStorage.getItem('tkj_nisn');
-            const savedNama = localStorage.getItem('tkj_nama');
-
-            if (savedToken && savedNisn && savedNama) {
-                document.getElementById('sectionRegister').classList.add('hidden-section');
-                document.getElementById('sectionAbsen').classList.remove('hidden-section');
-                document.getElementById('displayNama').innerText = savedNama;
-                document.getElementById('displayNisn').innerText = savedNisn;
-
-                // --- LOGIKA CEK STATUS ABSEN HARI INI ---
-                const lastAbsenRaw = localStorage.getItem('tkj_last_absen_raw'); // Berisi tanggal murni (contoh: Mon Oct 23 2026)
-                const lastAbsenText = localStorage.getItem('tkj_last_absen_text'); // Berisi format rapi (contoh: Senin, 23 Oktober 2026, 06:45 WIB)
-                const todayRaw = new Date().toDateString();
-
-                const btnAbsen = document.getElementById('btnAbsen');
-                const btnAbsenText = document.getElementById('btnAbsenText');
-                const iconAbsen = document.getElementById('iconAbsen');
-                const displayStatus = document.getElementById('displayStatus');
-                const displayWaktuAbsen = document.getElementById('displayWaktuAbsen');
-                const teksLokasi = document.getElementById('teksLokasi');
-
-                if (lastAbsenRaw === todayRaw) {
-                    // JIKA SUDAH ABSEN HARI INI: Ubah gaya tombol jadi redup dan nonaktifkan
-                    btnAbsen.disabled = true;
-                    btnAbsen.className = "w-40 h-40 bg-slate-200 rounded-full text-slate-400 font-bold text-2xl flex flex-col items-center justify-center mx-auto border-4 border-slate-100 cursor-not-allowed";
-                    btnAbsenText.innerText = "SELESAI";
-                    iconAbsen.className = "fa-solid fa-lock text-4xl mb-2";
-                    teksLokasi.innerText = "Kembali lagi besok pagi pukul 06:00.";
-
-                    displayWaktuAbsen.innerText = `[${lastAbsenText}]`;
-                    displayStatus.classList.remove('hidden-section');
-                } else {
-                    // JIKA HARI BARU (BELUM ABSEN): Kembalikan tombol jadi hijau
-                    btnAbsen.disabled = false;
-                    btnAbsen.className = "w-40 h-40 bg-teal-500 hover:bg-teal-600 rounded-full text-white font-bold text-2xl shadow-[0_0_20px_rgba(20,184,166,0.5)] transition-all duration-300 active:scale-95 flex flex-col items-center justify-center mx-auto border-4 border-teal-300 relative overflow-hidden group";
-                    btnAbsenText.innerText = "HADIR";
-                    iconAbsen.className = "fa-solid fa-hand-pointer text-4xl mb-2 group-hover:-translate-y-1 transition-transform";
-                    teksLokasi.innerHTML = `<i class="fa-solid fa-location-dot"></i> Pastikan Anda sudah di dalam area sekolah.`;
-                    
-                    displayStatus.classList.add('hidden-section');
-                }
-
-            } else {
-                document.getElementById('sectionRegister').classList.remove('hidden-section');
-                document.getElementById('sectionAbsen').classList.add('hidden-section');
-            }
-        }
-
+        // Fungsi Generate Token Acak
         function generateToken() {
-            return 'DEV-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+            return 'DEV-' + Math.random().toString(36).substr(2, 16);
         }
-        // Fungsi baru untuk mendeteksi jenis browser
-        // Fungsi cerdas pendeteksi jenis browser (Lebih dari 15 Jenis)
+
+        // Fungsi Pendeteksi Browser Otomatis
         function getNamaBrowser() {
             const ua = navigator.userAgent;
-            
-            // 1. Browser Spesifik Merk HP (Tiongkok & Korea)
             if (ua.includes("UCBrowser") || ua.includes("UCWEB")) return "UC Browser";
             if (ua.includes("SamsungBrowser")) return "Samsung Internet";
             if (ua.includes("MiuiBrowser")) return "Mi Browser (Xiaomi)";
             if (ua.includes("MintBrowser")) return "Mint Browser (Xiaomi)";
             if (ua.includes("VivoBrowser")) return "Vivo Browser";
             if (ua.includes("OppoBrowser") || ua.includes("HeyTapBrowser")) return "Oppo Browser";
-            
-            // 2. Browser Alternatif Populer
             if (ua.includes("YaBrowser")) return "Yandex Browser";
             if (ua.includes("Vivaldi")) return "Vivaldi";
             if (ua.includes("Maxthon")) return "Maxthon";
             if (ua.includes("Puffin")) return "Puffin Browser";
             if (ua.includes("AlohaBrowser")) return "Aloha Browser";
             if (ua.includes("DuckDuckGo")) return "DuckDuckGo Browser";
-            
-            // 3. In-App Browser (Jika siswa buka link dari sosmed)
             if (ua.includes("FBAN") || ua.includes("FBAV")) return "In-App (Facebook)";
             if (ua.includes("Instagram")) return "In-App (Instagram)";
-            
-            // 4. Browser Utama (Major Browsers) - Wajib ditaruh di bawah!
             if (ua.includes("Edg") || ua.includes("Edge") || ua.includes("EdgiOS")) return "Microsoft Edge";
             if (ua.includes("OPR") || ua.includes("Opera") || ua.includes("OPiOS")) return "Opera";
             if (ua.includes("FxiOS") || ua.includes("Firefox")) return "Mozilla Firefox";
-            
-            // Chrome dan Safari di urutan terakhir karena browser lain meniru namanya
             if (ua.includes("CriOS") || ua.includes("Chrome")) return "Google Chrome";
             if (ua.includes("Safari") && !ua.includes("Chrome") && !ua.includes("Android")) return "Apple Safari";
-            
             return "Browser Bawaan HP / Lainnya";
         }
 
+        // Fungsi Cek Status HP saat web dibuka
+        function checkDeviceState() {
+            const savedToken = localStorage.getItem('tkj_device_token');
+            const savedNisn = localStorage.getItem('tkj_nisn');
+            const savedNama = localStorage.getItem('tkj_nama');
+
+            document.getElementById('loadingState').classList.add('hidden-section');
+
+            if (savedToken && savedNisn) {
+                document.getElementById('panelAbsen').classList.remove('hidden-section');
+                document.getElementById('displayName').innerText = savedNama || "Siswa TKJ";
+                document.getElementById('displayNisn').innerText = "NISN: " + savedNisn;
+                document.getElementById('displayToken').innerText = "ID Keamanan: " + savedToken.substring(0, 15) + "...";
+            } else {
+                document.getElementById('formRegistrasi').classList.remove('hidden-section');
+            }
+        }
+
+        // Rute 1: Fungsi Registrasi Perangkat (Sistem Kunci HP)
         async function registerDevice(e) {
             e.preventDefault();
             const nisn = document.getElementById('regNisn').value;
             const newToken = generateToken();
-            const infoBrowser = getNamaBrowser(); // Memanggil fungsi pendeteksi
+            const infoBrowser = getNamaBrowser(); 
 
             document.getElementById('btnRegText').classList.add('hidden-section');
             document.getElementById('btnRegLoading').classList.remove('hidden-section');
             document.getElementById('btnReg').disabled = true;
 
-            // Tambahkan variabel browser ke dalam payload yang dikirim ke server
             const payload = { action: "register_device", nisn: nisn, token: newToken, browser: infoBrowser };
 
             try {
@@ -202,90 +159,95 @@
                     Swal.fire('Registrasi Gagal', result.message, 'error');
                 }
             } catch (error) {
-                Swal.fire('Error', 'Gagal menghubungi server. Cek internet Anda.', 'error');
+                Swal.fire('Error', 'Gagal menghubungi server. Pastikan internet menyala.', 'error');
             } finally {
                 document.getElementById('btnRegText').classList.remove('hidden-section');
                 document.getElementById('btnRegLoading').classList.add('hidden-section');
                 document.getElementById('btnReg').disabled = false;
             }
         }
-       
-        function prosesAbsen() {
-            const btnText = document.getElementById('btnAbsenText');
-            const btnLoading = document.getElementById('btnAbsenLoading');
-            const btn = document.getElementById('btnAbsen');
 
-            btnText.classList.add('hidden-section');
-            btnLoading.classList.remove('hidden-section');
-            btn.disabled = true;
-
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(
-                    async function(position) {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
-                        const token = localStorage.getItem('tkj_device_token');
-                        const nisn = localStorage.getItem('tkj_nisn');
-                        const nama = localStorage.getItem('tkj_nama');
-
-                        const payload = { action: "absen", nisn: nisn, nama: nama, token: token, latitude: lat, longitude: lng };
-
-                        try {
-                            const response = await fetch(API_URL, {
-                                method: "POST",
-                                body: JSON.stringify(payload),
-                                headers: { "Content-Type": "text/plain;charset=utf-8" }
-                            });
-                            const result = await response.json();
-
-                            if (result.status === "success") {
-                                // --- SIMPAN REKAMAN WAKTU KE LOKAL BROWSER HP ---
-                                const now = new Date();
-                                // Opsi untuk menampilkan format: Hari, Tanggal Bulan Tahun
-                                const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-                                const dateStr = now.toLocaleDateString('id-ID', optionsDate);
-                                // Opsi untuk menampilkan jam: Jam:Menit WIB
-                                const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-                                
-                                // Simpan tanggal murni untuk logika mesin
-                                localStorage.setItem('tkj_last_absen_raw', now.toDateString()); 
-                                // Simpan teks jam cantik untuk dibaca manusia
-                                localStorage.setItem('tkj_last_absen_text', `${dateStr}, ${timeStr} WIB`); 
-
-                                Swal.fire('Terekam!', result.message, 'success').then(() => {
-                                    checkDeviceState(); // Segarkan tampilan, tombol akan langsung terkunci!
-                                });
-                            } else {
-                                Swal.fire('Gagal Absen', result.message, 'error');
-                            }
-                        } catch (error) {
-                            Swal.fire('Error', 'Koneksi ke server terputus.', 'error');
-                        } finally {
-                            if(document.getElementById('btnAbsenText').innerText === "HADIR"){
-                                // Hanya reset tombol jika belum berstatus "SELESAI"
-                                btnText.classList.remove('hidden-section');
-                                btnLoading.classList.add('hidden-section');
-                                btn.disabled = false;
-                            } else {
-                                btnLoading.classList.add('hidden-section');
-                            }
-                        }
-                    },
-                    function(error) {
-                        Swal.fire('GPS Mati', 'Tolong izinkan akses lokasi (GPS) di browser Anda untuk bisa absen.', 'error');
-                        btnText.classList.remove('hidden-section');
-                        btnLoading.classList.add('hidden-section');
-                        btn.disabled = false;
-                    },
-                    { enableHighAccuracy: true } 
-                );
-            } else {
-                Swal.fire('Error', 'Browser tidak mendukung pencarian lokasi.', 'error');
-                btnText.classList.remove('hidden-section');
-                btnLoading.classList.add('hidden-section');
-                btn.disabled = false;
+        // Rute 2: Fungsi Absen & Intelijen GPS Forensik
+        function catatPresensi() {
+            if (!navigator.geolocation) {
+                Swal.fire('Error', 'Browser HP Anda tidak mendukung fitur lokasi.', 'error');
+                return;
             }
+
+            document.getElementById('btnAbsenText').classList.add('hidden-section');
+            document.getElementById('btnAbsenLoading').classList.remove('hidden-section');
+            document.getElementById('btnAbsen').disabled = true;
+
+            // Meminta koordinat dengan akurasi tinggi
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // --- PENANGKAP LOG FORENSIK FAKE GPS ---
+                    const akurasi = position.coords.accuracy;
+                    let ketinggian = position.coords.altitude;
+                    if (ketinggian === null) {
+                        ketinggian = "Kosong (Mencurigakan)";
+                    } else {
+                        ketinggian = ketinggian.toFixed(2) + "m";
+                    }
+                    const infoForensik = `Akurasi: ${akurasi}m | Ketinggian: ${ketinggian}`;
+                    // ---------------------------------------
+
+                    const savedToken = localStorage.getItem('tkj_device_token');
+                    const savedNisn = localStorage.getItem('tkj_nisn');
+                    const savedNama = localStorage.getItem('tkj_nama');
+
+                    const payload = { 
+                        action: "absen", 
+                        nisn: savedNisn, 
+                        nama: savedNama, 
+                        token: savedToken, 
+                        latitude: lat, 
+                        longitude: lng,
+                        log_forensik: infoForensik // Data dikirim ke Code.gs
+                    };
+
+                    try {
+                        const response = await fetch(API_URL, {
+                            method: "POST",
+                            body: JSON.stringify(payload),
+                            headers: { "Content-Type": "text/plain;charset=utf-8" }
+                        });
+                        const result = await response.json();
+
+                        if (result.status === "success") {
+                            Swal.fire('Hadir!', result.message, 'success');
+                        } else {
+                            Swal.fire('Gagal Absen', result.message, 'error');
+                        }
+                    } catch (error) {
+                        Swal.fire('Error Jaringan', 'Sinyal tidak stabil, coba lagi.', 'error');
+                    } finally {
+                        document.getElementById('btnAbsenText').classList.remove('hidden-section');
+                        document.getElementById('btnAbsenLoading').classList.add('hidden-section');
+                        document.getElementById('btnAbsen').disabled = false;
+                    }
+                },
+                (error) => {
+                    let errMsg = 'Tidak bisa melacak lokasi Anda.';
+                    if (error.code === 1) errMsg = 'Izin lokasi (GPS) ditolak! Tolong aktifkan di pengaturan HP Anda.';
+                    if (error.code === 2) errMsg = 'Sinyal GPS tidak tersedia.';
+                    if (error.code === 3) errMsg = 'Pencarian titik lokasi terlalu lama (Timeout).';
+                    
+                    Swal.fire('GPS Error', errMsg, 'warning');
+                    
+                    document.getElementById('btnAbsenText').classList.remove('hidden-section');
+                    document.getElementById('btnAbsenLoading').classList.add('hidden-section');
+                    document.getElementById('btnAbsen').disabled = false;
+                },
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+            );
         }
+
+        // Jalankan pengecekan saat halaman dimuat
+        window.onload = checkDeviceState;
     </script>
 </body>
 </html>

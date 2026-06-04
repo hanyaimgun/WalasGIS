@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Presensi Siswa TKJ</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <style>
+        .spinner { border: 4px solid rgba(255,255,255,0.3); border-radius: 50%; border-top: 4px solid #fff; width: 24px; height: 24px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .hidden-section { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans antialiased text-slate-800 min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-teal-500 to-cyan-700">
+
+    <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md relative overflow-hidden">
+        
+        <a href="index.html" class="absolute top-4 left-4 text-slate-400 hover:text-slate-600">
+            <i class="fa-solid fa-arrow-left text-xl"></i>
+        </a>
+
+        <div class="text-center mb-6 mt-4">
+            <div class="bg-teal-100 text-teal-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i class="fa-solid fa-fingerprint text-3xl"></i>
+            </div>
+            <h1 class="text-xl font-bold">Presensi Harian</h1>
+            <p class="text-slate-500 text-sm">Radius Maksimal: 70 Meter</p>
+        </div>
+
+        <div id="sectionRegister" class="hidden-section">
+            <div class="bg-amber-50 border border-amber-200 text-amber-700 text-xs p-3 rounded-lg mb-4 text-center">
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Perhatian:</b> HP ini akan dikunci secara permanen untuk 1 NISN. Jangan gunakan HP teman!
+            </div>
+            
+            <form id="formRegister" onsubmit="registerDevice(event)">
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold mb-1">Nama Lengkap</label>
+                    <input type="text" id="regNama" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 outline-none focus:border-teal-500">
+                </div>
+                <div class="mb-5">
+                    <label class="block text-sm font-semibold mb-1">NISN</label>
+                    <input type="number" id="regNisn" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 outline-none focus:border-teal-500">
+                </div>
+                <button type="submit" id="btnReg" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition duration-300 shadow-md">
+                    <span id="btnRegText"><i class="fa-solid fa-lock mr-1"></i> Kunci Perangkat & Daftar</span>
+                    <span id="btnRegLoading" class="hidden-section"><div class="spinner"></div> Memproses...</span>
+                </button>
+            </form>
+        </div>
+
+        <div id="sectionAbsen" class="hidden-section text-center">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
+                <p class="text-xs text-slate-500 mb-1">Login sebagai:</p>
+                <h3 id="displayNama" class="font-bold text-teal-700 text-lg leading-tight">Nama Siswa</h3>
+                <p id="displayNisn" class="text-sm font-mono text-slate-500">123456</p>
+            </div>
+
+            <button onclick="prosesAbsen()" id="btnAbsen" class="w-40 h-40 bg-teal-500 hover:bg-teal-600 rounded-full text-white font-bold text-2xl shadow-[0_0_20px_rgba(20,184,166,0.5)] transition-all duration-300 active:scale-95 flex flex-col items-center justify-center mx-auto border-4 border-teal-300 relative overflow-hidden group">
+                <i class="fa-solid fa-hand-pointer text-4xl mb-2 group-hover:-translate-y-1 transition-transform"></i>
+                <span id="btnAbsenText">HADIR</span>
+                <div id="btnAbsenLoading" class="hidden-section absolute inset-0 bg-teal-600 flex flex-col items-center justify-center">
+                    <div class="spinner mb-2"></div>
+                    <span class="text-sm font-normal">Mencari GPS...</span>
+                </div>
+            </button>
+            <p class="text-xs text-slate-400 mt-6"><i class="fa-solid fa-location-dot"></i> Pastikan Anda sudah di dalam area sekolah.</p>
+        </div>
+
+    </div>
+
+    <script>
+        // API URL Anda
+        const API_URL = "https://script.google.com/macros/s/AKfycbzdn24y9qWXmcwvl5Jwh5JA3xmciDuvae_8VOiczM9uqunsRW8s4XsYpSKY4fGY3R3L/exec";
+        
+        // Cek Status Perangkat saat halaman dimuat
+        document.addEventListener("DOMContentLoaded", checkDeviceState);
+
+        function checkDeviceState() {
+            const savedToken = localStorage.getItem('tkj_device_token');
+            const savedNisn = localStorage.getItem('tkj_nisn');
+            const savedNama = localStorage.getItem('tkj_nama');
+
+            if (savedToken && savedNisn && savedNama) {
+                // Sudah teregistrasi, tampilkan tombol absen
+                document.getElementById('sectionRegister').classList.add('hidden-section');
+                document.getElementById('sectionAbsen').classList.remove('hidden-section');
+                document.getElementById('displayNama').innerText = savedNama;
+                document.getElementById('displayNisn').innerText = savedNisn;
+            } else {
+                // Belum teregistrasi, tampilkan form
+                document.getElementById('sectionRegister').classList.remove('hidden-section');
+                document.getElementById('sectionAbsen').classList.add('hidden-section');
+            }
+        }
+
+        function generateToken() {
+            return 'DEV-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+        }
+
+        async function registerDevice(e) {
+            e.preventDefault();
+            const nama = document.getElementById('regNama').value;
+            const nisn = document.getElementById('regNisn').value;
+            const newToken = generateToken();
+
+            document.getElementById('btnRegText').classList.add('hidden-section');
+            document.getElementById('btnRegLoading').classList.remove('hidden-section');
+            document.getElementById('btnReg').disabled = true;
+
+            const payload = { action: "register_device", nama: nama, nisn: nisn, token: newToken };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                    headers: { "Content-Type": "text/plain;charset=utf-8" }
+                });
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    // Simpan permanen di HP
+                    localStorage.setItem('tkj_device_token', newToken);
+                    localStorage.setItem('tkj_nisn', nisn);
+                    localStorage.setItem('tkj_nama', nama);
+                    
+                    Swal.fire('Berhasil!', 'HP ini telah dikunci untuk identitas Anda.', 'success').then(() => {
+                        checkDeviceState(); // Refresh tampilan
+                    });
+                } else {
+                    Swal.fire('Akses Ditolak', result.message, 'error');
+                }
+            } catch (error) {
+                Swal.fire('Error', 'Gagal menghubungi server. Cek internet Anda.', 'error');
+            } finally {
+                document.getElementById('btnRegText').classList.remove('hidden-section');
+                document.getElementById('btnRegLoading').classList.add('hidden-section');
+                document.getElementById('btnReg').disabled = false;
+            }
+        }
+
+        function prosesAbsen() {
+            const btnText = document.getElementById('btnAbsenText');
+            const btnLoading = document.getElementById('btnAbsenLoading');
+            const btn = document.getElementById('btnAbsen');
+
+            btnText.classList.add('hidden-section');
+            btnLoading.classList.remove('hidden-section');
+            btn.disabled = true;
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    async function(position) {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        const token = localStorage.getItem('tkj_device_token');
+                        const nisn = localStorage.getItem('tkj_nisn');
+                        const nama = localStorage.getItem('tkj_nama');
+
+                        const payload = { action: "absen", nisn: nisn, nama: nama, token: token, latitude: lat, longitude: lng };
+
+                        try {
+                            const response = await fetch(API_URL, {
+                                method: "POST",
+                                body: JSON.stringify(payload),
+                                headers: { "Content-Type": "text/plain;charset=utf-8" }
+                            });
+                            const result = await response.json();
+
+                            if (result.status === "success") {
+                                Swal.fire('Terekam!', result.message, 'success');
+                            } else {
+                                Swal.fire('Gagal Absen', result.message, 'error');
+                            }
+                        } catch (error) {
+                            Swal.fire('Error', 'Koneksi ke server terputus.', 'error');
+                        } finally {
+                            resetButton(btnText, btnLoading, btn);
+                        }
+                    },
+                    function(error) {
+                        Swal.fire('GPS Mati', 'Tolong izinkan akses lokasi (GPS) di browser Anda untuk bisa absen.', 'error');
+                        resetButton(btnText, btnLoading, btn);
+                    },
+                    { enableHighAccuracy: true } // Wajib akurasi tinggi
+                );
+            } else {
+                Swal.fire('Error', 'Browser tidak mendukung pencarian lokasi.', 'error');
+                resetButton(btnText, btnLoading, btn);
+            }
+        }
+
+        function resetButton(textEl, loadingEl, btnEl) {
+            textEl.classList.remove('hidden-section');
+            loadingEl.classList.add('hidden-section');
+            btnEl.disabled = false;
+        }
+    </script>
+</body>
+</html>

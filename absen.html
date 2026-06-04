@@ -37,17 +37,13 @@
             </div>
             
             <form id="formRegister" onsubmit="registerDevice(event)">
-                <div class="mb-4">
-                    <label class="block text-sm font-semibold mb-1">Nama Lengkap</label>
-                    <input type="text" id="regNama" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 outline-none focus:border-teal-500">
-                </div>
                 <div class="mb-5">
-                    <label class="block text-sm font-semibold mb-1">NIS</label>
-                    <input type="number" id="regNisn" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-2.5 outline-none focus:border-teal-500">
+                    <label class="block text-sm font-semibold mb-1">Masukkan NISN Anda</label>
+                    <input type="number" id="regNisn" placeholder="Contoh: 001234567" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 outline-none focus:border-teal-500 font-mono">
                 </div>
                 <button type="submit" id="btnReg" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition duration-300 shadow-md">
-                    <span id="btnRegText"><i class="fa-solid fa-lock mr-1"></i> Kunci Perangkat & Daftar</span>
-                    <span id="btnRegLoading" class="hidden-section"><div class="spinner"></div> Memproses...</span>
+                    <span id="btnRegText"><i class="fa-solid fa-search mr-1"></i> Cari & Kunci Perangkat</span>
+                    <span id="btnRegLoading" class="hidden-section"><div class="spinner"></div> Sinkronisasi Data...</span>
                 </button>
             </form>
         </div>
@@ -101,9 +97,8 @@
             return 'DEV-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
         }
 
-        async function registerDevice(e) {
+       async function registerDevice(e) {
             e.preventDefault();
-            const nama = document.getElementById('regNama').value;
             const nisn = document.getElementById('regNisn').value;
             const newToken = generateToken();
 
@@ -111,7 +106,8 @@
             document.getElementById('btnRegLoading').classList.remove('hidden-section');
             document.getElementById('btnReg').disabled = true;
 
-            const payload = { action: "register_device", nama: nama, nisn: nisn, token: newToken };
+            // Kita HANYA mengirimkan NISN dan Token ke server
+            const payload = { action: "register_device", nisn: nisn, token: newToken };
 
             try {
                 const response = await fetch(API_URL, {
@@ -122,16 +118,16 @@
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    // Simpan permanen di HP
+                    // Server berhasil menemukan nama di Sheet Domisili, simpan semuanya ke memori HP
                     localStorage.setItem('tkj_device_token', newToken);
                     localStorage.setItem('tkj_nisn', nisn);
-                    localStorage.setItem('tkj_nama', nama);
+                    localStorage.setItem('tkj_nama', result.nama); // <--- Mengambil variabel 'nama' balasan dari Apps Script
                     
-                    Swal.fire('Berhasil!', 'HP ini telah dikunci untuk identitas Anda.', 'success').then(() => {
-                        checkDeviceState(); // Refresh tampilan
+                    Swal.fire('Berhasil!', result.message, 'success').then(() => {
+                        checkDeviceState(); // Ubah tampilan langsung ke tombol Hadir
                     });
                 } else {
-                    Swal.fire('Akses Ditolak', result.message, 'error');
+                    Swal.fire('Registrasi Gagal', result.message, 'error');
                 }
             } catch (error) {
                 Swal.fire('Error', 'Gagal menghubungi server. Cek internet Anda.', 'error');

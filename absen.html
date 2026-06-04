@@ -28,17 +28,17 @@
                 <i class="fa-solid fa-fingerprint text-3xl"></i>
             </div>
             <h1 class="text-xl font-bold">Presensi Harian</h1>
-            <p class="text-slate-500 text-sm">Radius Maksimal 50 Meter dari Kelas</p>
+            <p class="text-slate-500 text-sm">Radius Maksimal: 70 Meter</p>
         </div>
 
         <div id="sectionRegister" class="hidden-section">
             <div class="bg-amber-50 border border-amber-200 text-amber-700 text-xs p-3 rounded-lg mb-4 text-center">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Perhatian:</b> HP ini akan dikunci secara permanen untuk 1 NIS. Jangan gunakan HP teman!
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> <b>Perhatian:</b> HP ini akan dikunci secara permanen untuk 1 NISN. Jangan gunakan HP teman!
             </div>
             
             <form id="formRegister" onsubmit="registerDevice(event)">
                 <div class="mb-5">
-                    <label class="block text-sm font-semibold mb-1">Masukkan NIS Anda</label>
+                    <label class="block text-sm font-semibold mb-1">Masukkan NISN Anda</label>
                     <input type="number" id="regNisn" placeholder="Contoh: 001234567" required class="w-full bg-slate-50 border border-slate-300 rounded-lg p-3 outline-none focus:border-teal-500 font-mono">
                 </div>
                 <button type="submit" id="btnReg" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition duration-300 shadow-md">
@@ -52,27 +52,31 @@
             <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
                 <p class="text-xs text-slate-500 mb-1">Login sebagai:</p>
                 <h3 id="displayNama" class="font-bold text-teal-700 text-lg leading-tight">Nama Siswa</h3>
-                <p id="displayNisn" class="text-sm font-mono text-slate-500">123456</p>
+                <p id="displayNisn" class="text-sm font-mono text-slate-500 mb-2">123456</p>
+                
+                <div id="displayStatus" class="hidden-section bg-green-50 border border-green-200 rounded-lg p-2 mt-2">
+                    <p class="text-xs font-bold text-green-700"><i class="fa-solid fa-circle-check"></i> Anda telah melakukan Presensi Hari Ini</p>
+                    <p id="displayWaktuAbsen" class="text-xs text-green-600 font-semibold mt-1"></p>
+                </div>
             </div>
 
             <button onclick="prosesAbsen()" id="btnAbsen" class="w-40 h-40 bg-teal-500 hover:bg-teal-600 rounded-full text-white font-bold text-2xl shadow-[0_0_20px_rgba(20,184,166,0.5)] transition-all duration-300 active:scale-95 flex flex-col items-center justify-center mx-auto border-4 border-teal-300 relative overflow-hidden group">
-                <i class="fa-solid fa-hand-pointer text-4xl mb-2 group-hover:-translate-y-1 transition-transform"></i>
+                <i id="iconAbsen" class="fa-solid fa-hand-pointer text-4xl mb-2 group-hover:-translate-y-1 transition-transform"></i>
                 <span id="btnAbsenText">HADIR</span>
                 <div id="btnAbsenLoading" class="hidden-section absolute inset-0 bg-teal-600 flex flex-col items-center justify-center">
                     <div class="spinner mb-2"></div>
                     <span class="text-sm font-normal">Mencari GPS...</span>
                 </div>
             </button>
-            <p class="text-xs text-slate-400 mt-6"><i class="fa-solid fa-location-dot"></i> Pastikan Anda sudah di dalam area sekolah.</p>
+            <p id="teksLokasi" class="text-xs text-slate-400 mt-6"><i class="fa-solid fa-location-dot"></i> Pastikan Anda sudah di dalam area sekolah.</p>
         </div>
 
     </div>
 
     <script>
         // API URL Anda
-        const API_URL = "https://script.google.com/macros/s/AKfycbwDExUtHMMy5jALo89VcyHD0JJloo8qpUFAxTr1FYv_gtuzrO0g7wfFkfi64Gne6jex/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbzdn24y9qWXmcwvl5Jwh5JA3xmciDuvae_8VOiczM9uqunsRW8s4XsYpSKY4fGY3R3L/exec";
         
-        // Cek Status Perangkat saat halaman dimuat
         document.addEventListener("DOMContentLoaded", checkDeviceState);
 
         function checkDeviceState() {
@@ -81,13 +85,45 @@
             const savedNama = localStorage.getItem('tkj_nama');
 
             if (savedToken && savedNisn && savedNama) {
-                // Sudah teregistrasi, tampilkan tombol absen
                 document.getElementById('sectionRegister').classList.add('hidden-section');
                 document.getElementById('sectionAbsen').classList.remove('hidden-section');
                 document.getElementById('displayNama').innerText = savedNama;
                 document.getElementById('displayNisn').innerText = savedNisn;
+
+                // --- LOGIKA CEK STATUS ABSEN HARI INI ---
+                const lastAbsenRaw = localStorage.getItem('tkj_last_absen_raw'); // Berisi tanggal murni (contoh: Mon Oct 23 2026)
+                const lastAbsenText = localStorage.getItem('tkj_last_absen_text'); // Berisi format rapi (contoh: Senin, 23 Oktober 2026, 06:45 WIB)
+                const todayRaw = new Date().toDateString();
+
+                const btnAbsen = document.getElementById('btnAbsen');
+                const btnAbsenText = document.getElementById('btnAbsenText');
+                const iconAbsen = document.getElementById('iconAbsen');
+                const displayStatus = document.getElementById('displayStatus');
+                const displayWaktuAbsen = document.getElementById('displayWaktuAbsen');
+                const teksLokasi = document.getElementById('teksLokasi');
+
+                if (lastAbsenRaw === todayRaw) {
+                    // JIKA SUDAH ABSEN HARI INI: Ubah gaya tombol jadi redup dan nonaktifkan
+                    btnAbsen.disabled = true;
+                    btnAbsen.className = "w-40 h-40 bg-slate-200 rounded-full text-slate-400 font-bold text-2xl flex flex-col items-center justify-center mx-auto border-4 border-slate-100 cursor-not-allowed";
+                    btnAbsenText.innerText = "SELESAI";
+                    iconAbsen.className = "fa-solid fa-lock text-4xl mb-2";
+                    teksLokasi.innerText = "Kembali lagi besok pagi pukul 06:00.";
+
+                    displayWaktuAbsen.innerText = `[${lastAbsenText}]`;
+                    displayStatus.classList.remove('hidden-section');
+                } else {
+                    // JIKA HARI BARU (BELUM ABSEN): Kembalikan tombol jadi hijau
+                    btnAbsen.disabled = false;
+                    btnAbsen.className = "w-40 h-40 bg-teal-500 hover:bg-teal-600 rounded-full text-white font-bold text-2xl shadow-[0_0_20px_rgba(20,184,166,0.5)] transition-all duration-300 active:scale-95 flex flex-col items-center justify-center mx-auto border-4 border-teal-300 relative overflow-hidden group";
+                    btnAbsenText.innerText = "HADIR";
+                    iconAbsen.className = "fa-solid fa-hand-pointer text-4xl mb-2 group-hover:-translate-y-1 transition-transform";
+                    teksLokasi.innerHTML = `<i class="fa-solid fa-location-dot"></i> Pastikan Anda sudah di dalam area sekolah.`;
+                    
+                    displayStatus.classList.add('hidden-section');
+                }
+
             } else {
-                // Belum teregistrasi, tampilkan form
                 document.getElementById('sectionRegister').classList.remove('hidden-section');
                 document.getElementById('sectionAbsen').classList.add('hidden-section');
             }
@@ -97,7 +133,7 @@
             return 'DEV-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
         }
 
-       async function registerDevice(e) {
+        async function registerDevice(e) {
             e.preventDefault();
             const nisn = document.getElementById('regNisn').value;
             const newToken = generateToken();
@@ -106,7 +142,6 @@
             document.getElementById('btnRegLoading').classList.remove('hidden-section');
             document.getElementById('btnReg').disabled = true;
 
-            // Kita HANYA mengirimkan NISN dan Token ke server
             const payload = { action: "register_device", nisn: nisn, token: newToken };
 
             try {
@@ -118,13 +153,12 @@
                 const result = await response.json();
 
                 if (result.status === "success") {
-                    // Server berhasil menemukan nama di Sheet Domisili, simpan semuanya ke memori HP
                     localStorage.setItem('tkj_device_token', newToken);
                     localStorage.setItem('tkj_nisn', nisn);
-                    localStorage.setItem('tkj_nama', result.nama); // <--- Mengambil variabel 'nama' balasan dari Apps Script
+                    localStorage.setItem('tkj_nama', result.nama);
                     
                     Swal.fire('Berhasil!', result.message, 'success').then(() => {
-                        checkDeviceState(); // Ubah tampilan langsung ke tombol Hadir
+                        checkDeviceState(); 
                     });
                 } else {
                     Swal.fire('Registrasi Gagal', result.message, 'error');
@@ -167,32 +201,52 @@
                             const result = await response.json();
 
                             if (result.status === "success") {
-                                Swal.fire('Presensi Berhasil!', result.message, 'success');
+                                // --- SIMPAN REKAMAN WAKTU KE LOKAL BROWSER HP ---
+                                const now = new Date();
+                                // Opsi untuk menampilkan format: Hari, Tanggal Bulan Tahun
+                                const optionsDate = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                                const dateStr = now.toLocaleDateString('id-ID', optionsDate);
+                                // Opsi untuk menampilkan jam: Jam:Menit WIB
+                                const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                                
+                                // Simpan tanggal murni untuk logika mesin
+                                localStorage.setItem('tkj_last_absen_raw', now.toDateString()); 
+                                // Simpan teks jam cantik untuk dibaca manusia
+                                localStorage.setItem('tkj_last_absen_text', `${dateStr}, ${timeStr} WIB`); 
+
+                                Swal.fire('Terekam!', result.message, 'success').then(() => {
+                                    checkDeviceState(); // Segarkan tampilan, tombol akan langsung terkunci!
+                                });
                             } else {
                                 Swal.fire('Gagal Absen', result.message, 'error');
                             }
                         } catch (error) {
                             Swal.fire('Error', 'Koneksi ke server terputus.', 'error');
                         } finally {
-                            resetButton(btnText, btnLoading, btn);
+                            if(document.getElementById('btnAbsenText').innerText === "HADIR"){
+                                // Hanya reset tombol jika belum berstatus "SELESAI"
+                                btnText.classList.remove('hidden-section');
+                                btnLoading.classList.add('hidden-section');
+                                btn.disabled = false;
+                            } else {
+                                btnLoading.classList.add('hidden-section');
+                            }
                         }
                     },
                     function(error) {
                         Swal.fire('GPS Mati', 'Tolong izinkan akses lokasi (GPS) di browser Anda untuk bisa absen.', 'error');
-                        resetButton(btnText, btnLoading, btn);
+                        btnText.classList.remove('hidden-section');
+                        btnLoading.classList.add('hidden-section');
+                        btn.disabled = false;
                     },
-                    { enableHighAccuracy: true } // Wajib akurasi tinggi
+                    { enableHighAccuracy: true } 
                 );
             } else {
                 Swal.fire('Error', 'Browser tidak mendukung pencarian lokasi.', 'error');
-                resetButton(btnText, btnLoading, btn);
+                btnText.classList.remove('hidden-section');
+                btnLoading.classList.add('hidden-section');
+                btn.disabled = false;
             }
-        }
-
-        function resetButton(textEl, loadingEl, btnEl) {
-            textEl.classList.remove('hidden-section');
-            loadingEl.classList.add('hidden-section');
-            btnEl.disabled = false;
         }
     </script>
 </body>

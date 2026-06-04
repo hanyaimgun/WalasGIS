@@ -133,13 +133,39 @@
             return 'DEV-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
         }
         // Fungsi baru untuk mendeteksi jenis browser
+        // Fungsi cerdas pendeteksi jenis browser (Lebih dari 15 Jenis)
         function getNamaBrowser() {
             const ua = navigator.userAgent;
-            if (ua.includes("Edg")) return "Microsoft Edge";
-            if (ua.includes("OPR") || ua.includes("Opera")) return "Opera";
-            if (ua.includes("Chrome")) return "Google Chrome";
-            if (ua.includes("Firefox")) return "Mozilla Firefox";
-            if (ua.includes("Safari") && !ua.includes("Chrome")) return "Apple Safari";
+            
+            // 1. Browser Spesifik Merk HP (Tiongkok & Korea)
+            if (ua.includes("UCBrowser") || ua.includes("UCWEB")) return "UC Browser";
+            if (ua.includes("SamsungBrowser")) return "Samsung Internet";
+            if (ua.includes("MiuiBrowser")) return "Mi Browser (Xiaomi)";
+            if (ua.includes("MintBrowser")) return "Mint Browser (Xiaomi)";
+            if (ua.includes("VivoBrowser")) return "Vivo Browser";
+            if (ua.includes("OppoBrowser") || ua.includes("HeyTapBrowser")) return "Oppo Browser";
+            
+            // 2. Browser Alternatif Populer
+            if (ua.includes("YaBrowser")) return "Yandex Browser";
+            if (ua.includes("Vivaldi")) return "Vivaldi";
+            if (ua.includes("Maxthon")) return "Maxthon";
+            if (ua.includes("Puffin")) return "Puffin Browser";
+            if (ua.includes("AlohaBrowser")) return "Aloha Browser";
+            if (ua.includes("DuckDuckGo")) return "DuckDuckGo Browser";
+            
+            // 3. In-App Browser (Jika siswa buka link dari sosmed)
+            if (ua.includes("FBAN") || ua.includes("FBAV")) return "In-App (Facebook)";
+            if (ua.includes("Instagram")) return "In-App (Instagram)";
+            
+            // 4. Browser Utama (Major Browsers) - Wajib ditaruh di bawah!
+            if (ua.includes("Edg") || ua.includes("Edge") || ua.includes("EdgiOS")) return "Microsoft Edge";
+            if (ua.includes("OPR") || ua.includes("Opera") || ua.includes("OPiOS")) return "Opera";
+            if (ua.includes("FxiOS") || ua.includes("Firefox")) return "Mozilla Firefox";
+            
+            // Chrome dan Safari di urutan terakhir karena browser lain meniru namanya
+            if (ua.includes("CriOS") || ua.includes("Chrome")) return "Google Chrome";
+            if (ua.includes("Safari") && !ua.includes("Chrome") && !ua.includes("Android")) return "Apple Safari";
+            
             return "Browser Bawaan HP / Lainnya";
         }
 

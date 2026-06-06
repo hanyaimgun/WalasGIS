@@ -124,7 +124,7 @@
                 document.getElementById('panelAbsen').classList.remove('hidden-section');
                 document.getElementById('displayName').innerText = savedNama || "Siswa TKJ";
                 document.getElementById('displayNisn').innerText = "NISN: " + savedNisn;
-                document.getElementById('displayToken').innerText = "ID Keamanan: " + savedToken.substring(0, 15) + "...";
+                document.getElementById('displayLockInfo').innerText = `Perangkat ini hanya dapat digunakan oleh ${savedNama} untuk melakukan presensi.`;
             } else {
                 document.getElementById('formRegistrasi').classList.remove('hidden-section');
             }

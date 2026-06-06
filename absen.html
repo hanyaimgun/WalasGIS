@@ -119,8 +119,7 @@
             return "Browser Bawaan HP / Lainnya";
         }
 
-        
-        // Fungsi Cek Status HP saat web dibuka
+
         // Fungsi Cek Status HP saat web dibuka
         function checkDeviceState() {
             const savedToken = localStorage.getItem('tkj_device_token');
@@ -140,28 +139,42 @@
                 const lockInfo = document.getElementById('displayLockInfo');
                 if(lockInfo) lockInfo.innerText = `Perangkat ini hanya dapat digunakan oleh ${savedNama} untuk melakukan presensi.`;
 
-                // --- LOGIKA DISABLE TOMBOL ---
-                const tanggalHariIni = new Date().toLocaleDateString('id-ID');
+                // --- LOGIKA DISABLE TOMBOL & PESAN SUKSES ---
+                const dateObj = new Date();
+                const tanggalHariIni = dateObj.toLocaleDateString('id-ID');
+                
+                // Array Nama Hari Bahasa Indonesia
+                const namaHari = ["Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"];
+                const hariIniStr = namaHari[dateObj.getDay()];
+
                 const lastAbsen = localStorage.getItem('tkj_last_absen');
                 const btnAbsen = document.getElementById('btnAbsen');
                 const btnAbsenText = document.getElementById('btnAbsenText');
+                const pesanSukses = document.getElementById('pesanSukses');
 
                 if (lastAbsen === tanggalHariIni) {
-                    // Jika sudah absen hari ini: Tombol jadi Abu-abu & Mati
+                    // Jika sudah absen hari ini: Tombol Mati & Tampilkan Pesan
                     btnAbsen.disabled = true;
                     btnAbsen.className = "w-36 h-36 bg-gray-400 text-white font-bold rounded-full shadow-inner flex flex-col justify-center items-center cursor-not-allowed border-4 border-gray-200 mx-auto";
                     btnAbsenText.innerHTML = `
                         <svg class="w-10 h-10 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                         <span class="text-base tracking-wide mt-1">Selesai</span>
                     `;
+                    
+                    // Isi dan munculkan pesan sukses
+                    pesanSukses.innerHTML = `Terimakasih <b>${savedNama}</b>, Hari ini <b>${hariIniStr} / ${tanggalHariIni}</b> presensimu berhasil direkap.`;
+                    pesanSukses.classList.remove('hidden-section');
                 } else {
-                    // Jika hari berganti (belum absen): Tombol kembali Hijau & Aktif
+                    // Jika hari berganti (belum absen): Tombol Hijau & Sembunyikan Pesan
                     btnAbsen.disabled = false;
                     btnAbsen.className = "w-36 h-36 bg-gradient-to-tr from-green-500 to-green-400 hover:from-green-600 hover:to-green-500 text-white font-bold rounded-full shadow-[0_10px_20px_rgba(34,197,94,0.4)] hover:shadow-[0_15px_30px_rgba(34,197,94,0.6)] transition-all flex flex-col justify-center items-center transform hover:scale-105 active:scale-95 border-4 border-white mx-auto";
                     btnAbsenText.innerHTML = `
                         <svg class="w-10 h-10 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.243-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                         <span class="text-lg tracking-wide">Hadir</span>
                     `;
+                    
+                    // Sembunyikan kotak pesan
+                    pesanSukses.classList.add('hidden-section');
                 }
                 // -----------------------------
             } else {

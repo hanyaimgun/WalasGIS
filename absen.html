@@ -17,42 +17,7 @@
 </head>
 <body class="bg-slate-100 min-h-screen flex items-center justify-center p-4 font-sans">
         <!-- Header -->
-        <!-- Header bergaya Mobile App -->
-        <div class="bg-blue-600 p-5 text-center text-white relative">
-            <!-- Ikon Back -->
-            <a href="index.html" class="absolute left-4 top-1/2 transform -translate-y-1/2 text-white hover:text-blue-200 transition-colors p-2 -ml-2 rounded-full hover:bg-blue-700 active:bg-blue-800">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-            </a>
-            
-            <h1 class="text-xl font-bold mb-1">Presensi Digital TKJ</h1>
-            <p class="text-xs text-blue-100">SMK Ma'arif NU Tirto</p>
-        </div>
-            <!-- Loading Cek Perangkat -->
-            <div id="loadingState" class="text-center py-4">
-                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
-                <p class="text-gray-600 text-sm">Mengecek status perangkat...</p>
-            </div>
-
-            <!-- Bagian 1: Form Registrasi HP (Hanya muncul jika belum terkunci) -->
-            <div id="formRegistrasi" class="hidden-section">
-                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded-r-md">
-                    <p class="text-sm text-yellow-800 font-medium">
-                        Perhatian: Perangkat ini belum didaftarkan. Satu NISN hanya bisa dikunci pada SATU HP.
-                    </p>
-                </div>
-                
-                <form id="regForm" onsubmit="registerDevice(event)">
-                    <div class="mb-5">
-                        <label class="block text-gray-700 text-sm font-bold mb-2">Masukkan NISN</label>
-                        <input type="number" id="regNisn" required class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" placeholder="Contoh: 0012345678">
-                    </div>
-                    <button type="submit" id="btnReg" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition-colors flex justify-center items-center">
-                        <span id="btnRegText">Kunci Perangkat Ini</span>
-                        <div id="btnRegLoading" class="hidden-section animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    </button>
-                </form>
-            </div>
-
+        
             <!-- Bagian 2: Panel Presensi Utama (Muncul jika HP sudah terkunci) -->
             <div id="panelAbsen" class="hidden-section text-center">
                 <div class="mb-6">
